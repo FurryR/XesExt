@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.1
+// @version      0.1.2
 // @description  Much Better than Original
 // @author       凌
 // @match        https://code.xueersi.com/*
@@ -207,15 +207,8 @@ function searchElem(elem, content) {
   console.warn('XesExt captured object XMLHttpRequest')
   const _open = window.XMLHttpRequest.prototype.open
   window.XMLHttpRequest.prototype.open = function (e, t, n) {
-    this.__xes_url = t
-    _open.call(this, e, t, n)
-  }
-  const _send = window.XMLHttpRequest.prototype.send
-  window.XMLHttpRequest.prototype.send = function (body) {
-    // console.warn(this)
-    if (this.__xes_url.includes('dj.xesimg.com')) {
-      this.onreadystatechange = () => {}
+    if (t.includes('dj.xesimg.com')) {
       console.warn('XesExt captured dj.xesimg.com XHR')
-    } else _send.call(this, body)
+    } else _open.call(this, e, t, n)
   }
 })();
