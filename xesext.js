@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.3
+// @version      0.1.4
 // @description  Much Better than Original
 // @author       凌
 // @match        https://code.xueersi.com/*
@@ -51,6 +51,19 @@ function searchElem(elem, content) {
   }
   return matches
 }
+function lightinit() {
+  /// (不稳定)删除猫博士的开眼课堂和老师们的作品 by 凌
+  const filter1 = searchElem('span', '猫博士的开眼课堂')
+  const filter2 = searchElem('span', '老师们的作品')
+  if (filter1.length == 1) {
+    console.warn('XesExt captured recommended-list span1')
+    filter1[0].parentNode.parentNode.parentNode.remove()
+  }
+  if (filter2.length == 1) {
+    console.warn('XesExt captured recommended-list span2')
+    filter2[0].parentNode.parentNode.parentNode.remove()
+  }
+}
 (function () {
   'use strict';
   window.addEventListener('load', () => {
@@ -95,17 +108,6 @@ function searchElem(elem, content) {
     if (rule.length == 1) {
       console.warn('XesExt captured rule button')
       rule[0].remove()
-    }
-    /// (不稳定)删除猫博士的开眼课堂和老师们的作品 by 凌
-    const filter1 = searchElem('span', '猫博士的开眼课堂')
-    const filter2 = searchElem('span', '老师们的作品')
-    if (filter1.length == 1) {
-      console.warn('XesExt captured recommended-list span1')
-      filter1[0].parentNode.parentNode.parentNode.remove()
-    }
-    if (filter2.length == 1) {
-      console.warn('XesExt captured recommended-list span2')
-      filter2[0].parentNode.parentNode.parentNode.remove()
     }
     /// [编辑器模式] 去除模板按钮 by 凌
     const btn = searchElem('a', ' 模板 ')
@@ -168,14 +170,8 @@ function searchElem(elem, content) {
         window.aceEditor.setTheme('ace/theme/tomorrow_night')
       }
     }
-    /// 添加修改版提示 by 凌
-    /// 这一段用于提示用户您正在使用修改的学而思。
-    /// 由于 XesExt 未获得官方允许，删除此段则代表您不同意我们的使用协议。请勿删除此段。
-    const footer = document.getElementsByClassName('footer__component')
-    if (footer.length == 1) {
-      console.warn('XesExt captured footer__component')
-      footer[0].innerHTML = '您正在使用 XesExt，一个修改版的学而思。<br>您可于 https://github.com/FurryR/XesExt 获得插件更新。<br>XesExt 是第三方组件，请自行承担使用后果。'
-    }
+    document.body.addEventListener('DOMNodeInserted', () => lightinit())
+    lightinit()
     /// 初始化完成
     console.warn('XesExt post-init')
   })
