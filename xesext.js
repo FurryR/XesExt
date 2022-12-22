@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.2
+// @version      0.1.3
 // @description  Much Better than Original
 // @author       凌
 // @match        https://code.xueersi.com/*
