@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.4
+// @version      0.1.5
 // @description  Much Better than Original
 // @author       凌
 // @match        https://code.xueersi.com/*
@@ -170,6 +170,29 @@ function lightinit() {
         window.aceEditor.setTheme('ace/theme/tomorrow_night')
       }
     }
+    /// [独占][作品模式]防止强制点赞
+    const likebtn = document.querySelector('.like')
+    if (likebtn) {
+      console.log('XesExt captured like btn')
+      likebtn.click = () => {
+        console.error('XesExt 检测到点赞按钮被触发。此作品可能含有刷赞代码。')
+      }
+    }
+    const favbtn = document.querySelector('.favorites')
+    if (favbtn) {
+      console.log('XesExt captured favorite btn')
+      favbtn.click = () => {
+        console.error('XesExt 检测到收藏按钮被触发。此作品可能含有刷赞代码。')
+      }
+    }
+    const followbtn = document.querySelector('.focus-btn')
+    if (followbtn) {
+      console.log('XesExt captured follow btn')
+      followbtn.click = () => {
+        console.error('XesExt 检测到关注按钮被触发。此作品可能含有刷赞代码。')
+      }
+    }
+    /// Light init
     document.body.addEventListener('DOMNodeInserted', () => lightinit())
     lightinit()
     /// 初始化完成
