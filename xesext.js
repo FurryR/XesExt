@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.5
+// @version      0.1.6
 // @description  Much Better than Original
 // @author       凌
+// @run-at       document-start
 // @match        https://code.xueersi.com/*
 // @icon         https://code.xueersi.com/static/images/code-home/qrlogo.png
 // @grant        none
@@ -36,7 +37,22 @@ function getScratchlink(id, version, type) {
 // [审查用]获得当前作品的各种配置
 function getPropertyByUrl() {
   const href = window.location.href;
-  const pid = /pid=[0-9]+/.exec(href)[0].substring('pid='.length);
+  if (href.indexOf('/codenoheader/') != -1) {
+    // https://code.xueersi.com/ide/codenoheader/(...)
+    const tmp = /\/codenoheader\/[0-9]+\?/.exec(href)[0].substring('/codenoheader/'.length)
+    return [tmp.substring(0, tmp.length - 1), 'cpp', 'cpp']
+  } else if (href.indexOf('/player.html') != -1) {
+    // https://code.xueersi.com/scratch3/player.html?pid=(...)&version=3.0&env=player&fullScreen=false&is_player=true
+    return [/pid=[0-9]+/.exec(href)[0].substring('pid='.length), /version=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('version='.length), 'scratch']
+  } else if (href.indexOf('/m/course-detail') != -1) {
+    // https://code.xueersi.com/m/course-detail?id=(...)&lang=(...)
+    const lang = /lang=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('lang='.length)
+    return [/id=[0-9]+/.exec(href)[0].substring('id='.length), lang, lang]
+  } else if (href.indexOf('/ide/code/') != -1) {
+    // https://code.xueersi.com/ide/code/(...)
+    return [/\/ide\/code\/[0-9]+/.exec(href)[0].substring('/ide/code/'.length), 'cpp', 'cpp']
+  }
+  const pid = /pid=[0-9]+/.exec(href)[0].substring('pid='.length)
   const version = /version=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('version='.length)
   const type = /langType=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('langType='.length)
   return [pid, version, type]
@@ -52,7 +68,7 @@ function searchElem(elem, content) {
   return matches
 }
 function lightinit() {
-  /// (不稳定)删除猫博士的开眼课堂和老师们的作品 by 凌
+  /// 删除猫博士的开眼课堂和老师们的作品 by 凌
   const filter1 = searchElem('span', '猫博士的开眼课堂')
   const filter2 = searchElem('span', '老师们的作品')
   if (filter1.length == 1) {
@@ -199,12 +215,20 @@ function lightinit() {
     console.warn('XesExt post-init')
   })
   /// 更好的反跟踪 提前初始化 by 凌
+  /// [独占][Pro] 访问已删除的作品 by 凌
   console.warn('XesExt pre-init')
   console.warn('XesExt captured object XMLHttpRequest')
   const _open = window.XMLHttpRequest.prototype.open
+  const project = getPropertyByUrl()
   window.XMLHttpRequest.prototype.open = function (e, t, n) {
     this.__xes_url = t
-    _open.call(this, e, t, n)
+    if (t.startsWith(`/api/compilers/v2/${project[0]}`)) {
+      console.warn(`XesExt replaced /api/compilers/v2/${project[0]} request`)
+      this.__xes_url = `/api/community/v4/projects/detail?id=${project[0]}&lang=${project[2]}`
+      _open.call(this, e, this.__xes_url, n)
+    } else {
+      _open.call(this, e, t, n)
+    }
   }
   const _send = window.XMLHttpRequest.prototype.send
   window.XMLHttpRequest.prototype.send = function (body) {
@@ -231,8 +255,14 @@ function lightinit() {
       window.XesInstance[v] = () => {}
     }
   }
+  if (window.Xes) {
+    console.warn('XesExt captured object Xes')
+    for (const v in window.Xes) {
+      window.Xes[v] = () => {}
+    }
+  }
   if (window.XesLoggerSDK) {
     console.warn('XesExt captured fn window.XesLoggerSDK')
-    window.XesLoggerSDK = () => {}
+    window.XesLoggerSDK = function () {}
   }
 })();
