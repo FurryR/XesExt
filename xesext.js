@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.6
+// @version      0.1.7
 // @description  Much Better than Original
 // @author       凌
 // @run-at       document-start
@@ -51,6 +51,10 @@ function getPropertyByUrl() {
   } else if (href.indexOf('/ide/code/') != -1) {
     // https://code.xueersi.com/ide/code/(...)
     return [/\/ide\/code\/[0-9]+/.exec(href)[0].substring('/ide/code/'.length), 'cpp', 'cpp']
+  } else if (href.indexOf('/project/publish/modal') != -1) {
+    // https://code.xueersi.com/project/publish/modal?pid=(...)&id=(...)&lang=(...)
+    const lang = /lang=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('lang='.length)
+    return [/id=[0-9]+/.exec(href)[0].substring('id='.length), lang, lang]
   }
   const pid = /pid=[0-9]+/.exec(href)[0].substring('pid='.length)
   const version = /version=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('version='.length)
