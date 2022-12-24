@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.7
+// @version      0.1.8
 // @description  Much Better than Original
 // @author       凌
 // @run-at       document-start
@@ -36,7 +36,7 @@ function getScratchlink(id, version, type) {
 }
 // [审查用]获得当前作品的各种配置
 function getPropertyByUrl() {
-  const href = window.location.href;
+  const href = window.location.href
   if (href.indexOf('/codenoheader/') != -1) {
     // https://code.xueersi.com/ide/codenoheader/(...)
     const tmp = /\/codenoheader\/[0-9]+\?/.exec(href)[0].substring('/codenoheader/'.length)
@@ -55,15 +55,17 @@ function getPropertyByUrl() {
     // https://code.xueersi.com/project/publish/modal?pid=(...)&id=(...)&lang=(...)
     const lang = /lang=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('lang='.length)
     return [/id=[0-9]+/.exec(href)[0].substring('id='.length), lang, lang]
+  } else if (href.indexOf('/home/project/detail') != -1) {
+    const pid = /pid=[0-9]+/.exec(href)[0].substring('pid='.length)
+    const version = /version=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('version='.length)
+    const type = /langType=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('langType='.length)
+    return [pid, version, type]
   }
-  const pid = /pid=[0-9]+/.exec(href)[0].substring('pid='.length)
-  const version = /version=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('version='.length)
-  const type = /langType=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('langType='.length)
-  return [pid, version, type]
+  return null
 }
 // [通用]寻找内容为content的elem类型的标签
 function searchElem(elem, content) {
-  const matches = [];
+  const matches = []
   for (const v of document.getElementsByTagName(elem)) {
     if (v.textContent.includes(content)) {
       matches.push(v)
@@ -85,7 +87,7 @@ function lightinit() {
   }
 }
 (function () {
-  'use strict';
+  'use strict'
   window.addEventListener('load', () => {
     console.warn('XesExt init')
     /// 变更改编按钮行为 by 凌
@@ -224,13 +226,20 @@ function lightinit() {
   console.warn('XesExt captured object XMLHttpRequest')
   const _open = window.XMLHttpRequest.prototype.open
   const project = getPropertyByUrl()
-  window.XMLHttpRequest.prototype.open = function (e, t, n) {
-    this.__xes_url = t
-    if (t.startsWith(`/api/compilers/v2/${project[0]}`)) {
-      console.warn(`XesExt replaced /api/compilers/v2/${project[0]} request`)
-      this.__xes_url = `/api/community/v4/projects/detail?id=${project[0]}&lang=${project[2]}`
-      _open.call(this, e, this.__xes_url, n)
-    } else {
+  if (project) {
+    window.XMLHttpRequest.prototype.open = function (e, t, n) {
+      this.__xes_url = t
+      if (t.startsWith(`/api/compilers/v2/${project[0]}`)) {
+        console.warn(`XesExt replaced /api/compilers/v2/${project[0]} request`)
+        this.__xes_url = `/api/community/v4/projects/detail?id=${project[0]}&lang=${project[2]}`
+        _open.call(this, e, this.__xes_url, n)
+      } else {
+        _open.call(this, e, t, n)
+      }
+    }
+  } else {
+    window.XMLHttpRequest.prototype.open = function (e, t, n) {
+      this.__xes_url = t
       _open.call(this, e, t, n)
     }
   }
@@ -269,4 +278,4 @@ function lightinit() {
     console.warn('XesExt captured fn window.XesLoggerSDK')
     window.XesLoggerSDK = function () {}
   }
-})();
+})()
