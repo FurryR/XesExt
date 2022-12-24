@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.8
+// @version      0.1.9
 // @description  Much Better than Original
 // @author       凌
 // @run-at       document-start
@@ -214,6 +214,35 @@ function lightinit() {
         console.error('XesExt 检测到关注按钮被触发。此作品可能含有刷赞代码。')
       }
     }
+    /// 更好的反跟踪 by 凌
+    if (window.logger) {
+      console.warn('XesExt captured object logger')
+      for (const v in window.logger) {
+        window.logger[v] = () => {}
+      }
+    }
+    if (window.__XES_LOG__) {
+      console.warn('XesExt captured object __XES_LOG__')
+      for (const v in window.__XES_LOG__) {
+        window.__XES_LOG__[v] = () => {}
+      }
+    }
+    if (window.XesInstance) {
+      console.warn('XesExt captured object XesInstance')
+      for (const v in window.XesInstance) {
+        window.XesInstance[v] = () => {}
+      }
+    }
+    if (window.Xes) {
+      console.warn('XesExt captured object Xes')
+      for (const v in window.Xes) {
+        window.Xes[v] = () => {}
+      }
+    }
+    if (window.XesLoggerSDK) {
+      console.warn('XesExt captured fn window.XesLoggerSDK')
+      window.XesLoggerSDK = function () {}
+    }
     /// Light init
     document.body.addEventListener('DOMNodeInserted', () => lightinit())
     lightinit()
@@ -248,34 +277,5 @@ function lightinit() {
     if (this.__xes_url.includes('dj.xesimg.com')) {
       console.warn('XesExt captured dj.xesimg.com XHR')
     } else _send.call(this, body)
-  }
-  /// 更好的反跟踪 by 凌
-  if (window.logger) {
-    console.warn('XesExt captured object logger')
-    for (const v in window.logger) {
-      window.logger[v] = () => {}
-    }
-  }
-  if (window.__XES_LOG__) {
-    console.warn('XesExt captured object __XES_LOG__')
-    for (const v in window.__XES_LOG__) {
-      window.__XES_LOG__[v] = () => {}
-    }
-  }
-  if (window.XesInstance) {
-    console.warn('XesExt captured object XesInstance')
-    for (const v in window.XesInstance) {
-      window.XesInstance[v] = () => {}
-    }
-  }
-  if (window.Xes) {
-    console.warn('XesExt captured object Xes')
-    for (const v in window.Xes) {
-      window.Xes[v] = () => {}
-    }
-  }
-  if (window.XesLoggerSDK) {
-    console.warn('XesExt captured fn window.XesLoggerSDK')
-    window.XesLoggerSDK = function () {}
   }
 })()
