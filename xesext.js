@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.9
+// @version      0.1.10
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -172,7 +172,7 @@ function lightinit() {
     const editor = document.getElementsByClassName('ace-editor tile is-child box ace_editor ace-tm')
     if (editor.length == 1) {
       console.warn('XesExt captured editor div')
-      editor[0].attributes.removeNamedItem('data-v-34180700')
+      editor[0].attributes.removeNamedItem(editor[0].attributes[0].name)
       editor[0].className = 'ace-editor tile is-child ace_editor ace-tm'
     }
     const gutterLayer = document.getElementsByClassName('ace_layer ace_gutter-layer')
