@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.10
+// @version      0.1.11
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -244,6 +244,9 @@ function lightinit() {
       console.warn('XesExt captured fn window.XesLoggerSDK')
       window.XesLoggerSDK = function () {}
     }
+    // 去除加载提示 by 凌
+    document.getElementById('loading-dom').style.display = 'none'
+    document.getElementById('loading-mobile-dom').style.display = 'none'
     /// Light init
     document.body.addEventListener('DOMNodeInserted', () => lightinit())
     lightinit()
@@ -252,6 +255,7 @@ function lightinit() {
   })
   console.warn('XesExt pre-init')
   /// 更好的反跟踪 提前初始化 by 凌
+  /// 去开屏广告 by 凌
   /// [独占][Pro] 访问已删除的作品 by 凌
   console.warn('XesExt captured object XMLHttpRequest')
   const _open = window.XMLHttpRequest.prototype.open
@@ -270,7 +274,12 @@ function lightinit() {
   } else {
     window.XMLHttpRequest.prototype.open = function (e, t, n) {
       this.__xes_url = t
-      _open.call(this, e, t, n)
+      if (t.startsWith('/api/pop/show/')) {
+        console.warn('XesExt captured /api/pop/show XHR')
+        _open.call(this, e, this.__xes_url = 'data:application/json,{"stat":1,"status":1,"msg":"","data":{"id":-1,"type":"normal","ads":[],"force":0,"open":1}}', n)
+      } else {
+        _open.call(this, e, t, n)
+      }
     }
   }
   const _send = window.XMLHttpRequest.prototype.send
@@ -279,4 +288,57 @@ function lightinit() {
       console.warn('XesExt captured dj.xesimg.com XHR')
     } else _send.call(this, body)
   }
+  // 社区主题美化 by 小埋 (凌 modified)
+  console.warn('XesExt add style')
+  const style = document.createElement('style');
+  style.innerHTML = `
+.floor-bar-wrapper { display: none }
+.header {
+  backdrop-filter:blur(5px);
+}
+.header.is-homepage {
+  background-color:rgba(255,255,255,0.3)!important ;
+}
+.header-left-nav-item-active {
+  background-color:rgba(0,0,0,0.08)!important;
+}
+.title-icon { display: none }
+.hero {
+  background: linear-gradient(to bottom, #92bcff, #66e6ffc4,#fff0) !important;
+}
+.header {
+  background: #92bcff !important;
+}
+.user-introduction {
+  background: linear-gradient(to bottom, #92bcff, #66e6ffc4) !important;
+}
+.user-name {
+  color:#000000a8;
+}
+.signature-zone {
+  color:#0000008f;
+}
+.user-count {
+  color:#0000008f;
+}
+.headercon {
+  background: linear-gradient(to left, #92bcffab, #66e6ff8f) !important;
+}
+.editor-group-header{
+  background: #fafafa !important;
+}
+.headercon-logo {
+  display: none;
+}
+.headercon-input {
+  background-color: rgba(255,255,255,0.2) !important;
+}
+.headercon-right__btn {
+  background: rgba(255,255,255,0.2) !important;
+}
+.headercon-center {
+  margin: 0 !important;
+}
+`;
+  document.head.appendChild(style);
 })()
