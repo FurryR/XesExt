@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.12
+// @version      0.1.13
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -274,20 +274,21 @@ function lightinit() {
       if (t.startsWith('/api/pop/show/')) {
         console.warn('XesExt captured /api/pop/show XHR')
         _open.call(this, e, this.__xes_url = 'data:application/json,{"stat":1,"status":1,"msg":"","data":{"id":-1,"type":"normal","ads":[],"force":0,"open":1}}', n)
+      } else if (this.__xes_url.includes('dj.xesimg.com')) {
+        console.warn('XesExt captured dj.xesimg.com XHR')
+        _open.call(this, e, this.__xes_url = 'data:application/json,{}', n)
       } else {
         _open.call(this, e, t, n)
       }
     }
   }
-  const _send = window.XMLHttpRequest.prototype.send
-  window.XMLHttpRequest.prototype.send = function (body) {
-    if (this.__xes_url.includes('dj.xesimg.com')) {
-      console.warn('XesExt captured dj.xesimg.com XHR')
-    } else _send.call(this, body)
-  }
+  // const _send = window.XMLHttpRequest.prototype.send
+  // window.XMLHttpRequest.prototype.send = function (body) {
+  //   _send.call(this, body)
+  // }
   // 社区主题美化 by 小埋 (凌 modified)
   console.warn('XesExt add style')
-  const style = document.createElement('style');
+  const style = document.createElement('style')
   style.innerHTML = `
 .floor-bar-wrapper { display: none }
 .header {
@@ -337,5 +338,5 @@ function lightinit() {
   margin: 0 !important;
 }
 `;
-  document.head.appendChild(style);
+  document.head.appendChild(style)
 })()
