@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.11
+// @version      0.1.12
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -244,9 +244,6 @@ function lightinit() {
       console.warn('XesExt captured fn window.XesLoggerSDK')
       window.XesLoggerSDK = function () {}
     }
-    // 去除加载提示 by 凌
-    document.getElementById('loading-dom').style.display = 'none'
-    document.getElementById('loading-mobile-dom').style.display = 'none'
     /// Light init
     document.body.addEventListener('DOMNodeInserted', () => lightinit())
     lightinit()
