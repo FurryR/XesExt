@@ -2,7 +2,8 @@
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
 // @version      0.1.9
-// @description  Much Better than Original
+// @description  Much Better than Original - 学而思功能增强
+// @license      GPL-3.0
 // @author       凌
 // @run-at       document-start
 // @match        https://code.xueersi.com/*
@@ -249,9 +250,9 @@ function lightinit() {
     /// 初始化完成
     console.warn('XesExt post-init')
   })
+  console.warn('XesExt pre-init')
   /// 更好的反跟踪 提前初始化 by 凌
   /// [独占][Pro] 访问已删除的作品 by 凌
-  console.warn('XesExt pre-init')
   console.warn('XesExt captured object XMLHttpRequest')
   const _open = window.XMLHttpRequest.prototype.open
   const project = getPropertyByUrl()
