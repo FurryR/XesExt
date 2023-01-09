@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.13
+// @version      0.1.14
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -286,57 +286,4 @@ function lightinit() {
   // window.XMLHttpRequest.prototype.send = function (body) {
   //   _send.call(this, body)
   // }
-  // 社区主题美化 by 小埋 (凌 modified)
-  console.warn('XesExt add style')
-  const style = document.createElement('style')
-  style.innerHTML = `
-.floor-bar-wrapper { display: none }
-.header {
-  backdrop-filter:blur(5px);
-}
-.header.is-homepage {
-  background-color:rgba(255,255,255,0.3)!important ;
-}
-.header-left-nav-item-active {
-  background-color:rgba(0,0,0,0.08)!important;
-}
-.title-icon { display: none }
-.hero {
-  background: linear-gradient(to bottom, #92bcff, #66e6ffc4,#fff0) !important;
-}
-.header {
-  background: #92bcff !important;
-}
-.user-introduction {
-  background: linear-gradient(to bottom, #92bcff, #66e6ffc4) !important;
-}
-.user-name {
-  color:#000000a8;
-}
-.signature-zone {
-  color:#0000008f;
-}
-.user-count {
-  color:#0000008f;
-}
-.headercon {
-  background: linear-gradient(to left, #92bcffab, #66e6ff8f) !important;
-}
-.editor-group-header{
-  background: #fafafa !important;
-}
-.headercon-logo {
-  display: none;
-}
-.headercon-input {
-  background-color: rgba(255,255,255,0.2) !important;
-}
-.headercon-right__btn {
-  background: rgba(255,255,255,0.2) !important;
-}
-.headercon-center {
-  margin: 0 !important;
-}
-`;
-  document.head.appendChild(style)
 })()
