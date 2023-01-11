@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.14
+// @version      0.1.15
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -264,6 +264,9 @@ function lightinit() {
         console.warn(`XesExt replaced /api/compilers/v2/${project[0]} request`)
         this.__xes_url = `/api/community/v4/projects/detail?id=${project[0]}&lang=${project[2]}`
         _open.call(this, e, this.__xes_url, n)
+      } else if (t.includes('dj.xesimg.com')) {
+        console.warn('XesExt captured dj.xesimg.com XHR')
+        _open.call(this, e, this.__xes_url = 'data:application/json,{}', n)
       } else {
         _open.call(this, e, t, n)
       }
@@ -274,7 +277,7 @@ function lightinit() {
       if (t.startsWith('/api/pop/show/')) {
         console.warn('XesExt captured /api/pop/show XHR')
         _open.call(this, e, this.__xes_url = 'data:application/json,{"stat":1,"status":1,"msg":"","data":{"id":-1,"type":"normal","ads":[],"force":0,"open":1}}', n)
-      } else if (this.__xes_url.includes('dj.xesimg.com')) {
+      } else if (t.includes('dj.xesimg.com')) {
         console.warn('XesExt captured dj.xesimg.com XHR')
         _open.call(this, e, this.__xes_url = 'data:application/json,{}', n)
       } else {
@@ -282,6 +285,7 @@ function lightinit() {
       }
     }
   }
+  Object.freeze(window.XMLHttpRequest.prototype.open)
   // const _send = window.XMLHttpRequest.prototype.send
   // window.XMLHttpRequest.prototype.send = function (body) {
   //   _send.call(this, body)
