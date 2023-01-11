@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.16
+// @version      0.1.17
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -10,6 +10,7 @@
 // @icon         https://code.xueersi.com/static/images/code-home/qrlogo.png
 // @grant        none
 // ==/UserScript==
+'use strict'
 /*
 Copyright(c) 2021 FurryR
 此程序基于 GPL-3.0 开源。
@@ -88,7 +89,6 @@ function lightinit() {
   }
 }
 (function () {
-  'use strict'
   window.addEventListener('load', () => {
     console.warn('XesExt init')
     /// 变更改编按钮行为 by 凌
@@ -284,16 +284,16 @@ function lightinit() {
           _open.call(this, e, this.__xes_url, n)
         } else {
           this.__xes_subreq = true
-          Object.defineProperty(this, "status", {
+          Object.defineProperty(this, 'status', {
             get: () => tmp.status
           })
-          Object.defineProperty(this, "response", {
+          Object.defineProperty(this, 'response', {
             get: () => tmp.response
           })
-          Object.defineProperty(this, "statusText", {
+          Object.defineProperty(this, 'statusText', {
             get: () => tmp.statusText
           })
-          Object.defineProperty(this, "responseText", {
+          Object.defineProperty(this, 'responseText', {
             get: () => tmp.responseText
           })
           _open.call(this, e, this.__xes_url = 'data:application/json,{}', n)
@@ -311,5 +311,11 @@ function lightinit() {
   const _send = window.XMLHttpRequest.prototype.send
   window.XMLHttpRequest.prototype.send = function (body) {
     _send.call(this, body)
+  }
+  Object.freeze(window.XMLHttpRequest.prototype.send)
+  /// 禁止重绘调用 by 凌
+  window.requestAnimationFrame = (callback) => {
+    setTimeout(() => callback(), 0)
+    return -1
   }
 })()
