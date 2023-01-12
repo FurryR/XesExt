@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.18
+// @version      0.1.19
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -318,10 +318,9 @@ function lightinit() {
   }
   Object.defineProperty(window.XMLHttpRequest.prototype, 'open', {
     get: () => _unprotected_open,
-    set: () => {}
+    set() {}
   })
-  Object.freeze(window.XMLHttpRequest.prototype)
-  console.warn('XesExt patched window.XMLHttpRequest.prototype')
+  console.warn('XesExt patched window.XMLHttpRequest.prototype.open')
   /// 禁止重绘调用 by 凌
   window.requestAnimationFrame = (callback) => {
     setTimeout(() => callback(), 0)
