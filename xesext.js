@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.19
+// @version      0.1.20
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -276,10 +276,9 @@ function lightinit() {
         _open.call(this, e, t, n)
       }
   }
-  let _unprotected_open = () => {}
   if (project) {
     console.warn('XesExt is running in project page')
-    _unprotected_open = function (e, t, n) {
+    window.XMLHttpRequest.prototype.open = function (e, t, n) {
       this.__xes_url = t
       if (t.startsWith(`/api/compilers/v2/${project[0]}`) && this.__xes_disableFilter != true) {
         console.warn(`XesExt replaced /api/compilers/v2/${project[0]} request`)
@@ -311,15 +310,12 @@ function lightinit() {
     }
   } else {
     console.warn('XesExt is running in non-project page')
-    _unprotected_open = function (e, t, n) {
+    window.XMLHttpRequest.prototype.open = function (e, t, n) {
       this.__xes_url = t
       _base_open.call(this, e, t, n)
     }
   }
-  Object.defineProperty(window.XMLHttpRequest.prototype, 'open', {
-    get: () => _unprotected_open,
-    set() {}
-  })
+  // 6，非得让你污染原型链不可。学而思前端还是趁早辞职吧？
   console.warn('XesExt patched window.XMLHttpRequest.prototype.open')
   /// 禁止重绘调用 by 凌
   window.requestAnimationFrame = (callback) => {
