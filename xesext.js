@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.20
+// @version      0.1.21
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -327,10 +327,10 @@ function lightinit() {
   window.setTimeout = (code, delay, ...args) => {
     if (code.toString().indexOf('fnTryLockRun') != -1 || code.toString().indexOf('document.getElementById(\'loading-dom\').style.display') != -1) {
       code()
-      return
+      return -1
     }
     // console.error(code, delay)
-    _setTimeout(code, delay, ...args)
+    return _setTimeout(code, delay, ...args)
   }
   console.log('XesExt patched window.setTimeout')
 })()
