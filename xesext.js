@@ -300,7 +300,7 @@ function lightinit() {
     }
     if (project) {
         console.warn('XesExt is running in project page')
-        /// [独占][Pro][Beta] 升级 xterm
+        /// [独占][Pro][Beta] 升级 xterm by 凌
         // 连字特性未启用 ('xterm-addon-ligatures.js') 原因:Lightpad
         ;['xterm.js', 'xterm-addon-webgl.js', 'xterm-addon-canvas.js', 'xterm-addon-unicode11.js', 'xterm-addon-ligatures.js', 'xterm-addon-fit.js', 'xterm.css'].forEach(e => {
             if (e.endsWith(".js")) {
@@ -315,7 +315,6 @@ function lightinit() {
                 document.head.appendChild(css)
             }
         })
-        /// [独占][Pro][Beta] 升级 xterm
         let newref = undefined
         Object.defineProperty(window, "refWsTerm", {
             get() {
