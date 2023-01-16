@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.22
+// @version      0.1.23
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -280,6 +280,7 @@ function lightinit() {
     /// 更好的反跟踪 提前初始化 by 凌
     /// 去开屏广告 by 凌
     /// [独占][Pro] 访问已删除的作品 by 凌
+    /// 去除危险提示 by 凌
     /// 删除猫博士的开眼课堂和老师们的作品[重制版] by 凌
     console.warn('XesExt patched object XMLHttpRequest')
     const _open = window.XMLHttpRequest.prototype.open
@@ -293,7 +294,10 @@ function lightinit() {
             _open.call(this, e, this.__xes_url = 'data:application/json,{"stat":1,"status":1,"msg":"","data":{"id":-1,"type":"normal","ads":[],"force":0,"open":1}}', n)
         } else if (t.startsWith('/api/index/works/modules')) {
             console.warn('XesExt patched /api/index/works/modules XHR')
-            _open.call(this, e, this.__xes_url = 'data:application/json,{"stat":1,"status":1,"msg":"操作成功","data":[{"title":"可多推荐","simple_title":"可多推荐","lines":2,"items":[]},{"title":"我的关注","simple_title":"我的关注","lines":2,"items":[]},{"title":"猜你喜欢","simple_title":"猜你喜欢","lines":2,"items":[]}]}', n)
+            _open.call(this, e, this.__xes_url = 'data:application/json,{"stat":1,"status":1,"msg":"","data":[{"title":"可多推荐","simple_title":"可多推荐","lines":2,"items":[]},{"title":"我的关注","simple_title":"我的关注","lines":2,"items":[]},{"title":"猜你喜欢","simple_title":"猜你喜欢","lines":2,"items":[]}]}', n)
+        } else if (t.startsWith('/api/compilers/danger_level')) {
+            console.warn('XesExt patched /api/compilers/danger_level XHR')
+            _open.call(this, e, this.__xes_url = '{"stat":1,"status":1,"msg":"","data":{"result":null}}')
         } else {
             _open.call(this, e, t, n)
         }
@@ -302,7 +306,7 @@ function lightinit() {
         console.warn('XesExt is running in project page')
         /// [独占][Pro][Beta] 升级 xterm by 凌
         // 连字特性未启用 ('xterm-addon-ligatures.js') 原因:Lightpad
-        ;['xterm.js', 'xterm-addon-webgl.js', 'xterm-addon-canvas.js', 'xterm-addon-unicode11.js', 'xterm-addon-ligatures.js', 'xterm-addon-fit.js', 'xterm.css'].forEach(e => {
+        ;['xterm.js', 'xterm-addon-webgl.js', 'xterm-addon-web-links.js', 'xterm-addon-canvas.js', 'xterm-addon-unicode11.js', 'xterm-addon-ligatures.js', 'xterm-addon-fit.js', 'xterm.css'].forEach(e => {
             if (e.endsWith(".js")) {
                 const script = document.createElement('script')
                 script.src = `https://furryr.github.io/xtermjs-build/js/${e}`
@@ -323,11 +327,30 @@ function lightinit() {
             set(e) {
                 if (newref == undefined) {
                     newref = e
+                    const tmp = {}
+                    for (const [key, value] of Object.entries(newref.xterm.term._core._events)) {
+                        if (!tmp[key]) tmp[key] = []
+                        value.forEach(v => {
+                            tmp[key].push(v)
+                        })
+                    }
+                    newref.xterm.close()
                     const xterm = document.getElementById('terminal')
                     if (xterm) {
                         // 背景修补
                         xterm.style.backgroundColor = xterm.parentNode.style.backgroundColor = xterm_theme.background
+                        // 删除本地作品栏
+                        if (xterm.parentNode.parentNode.parentNode.parentNode.classList.contains('offline')) {
+                            xterm.parentNode.parentNode.parentNode.parentNode.classList.remove('offline')
+                            xterm.parentNode.parentNode.parentNode.parentNode.parentNode.childNodes[1].classList.remove('offline')
+                            xterm.parentNode.parentNode.parentNode.parentNode.parentNode.childNodes[0].remove()
+                            // xterm.parentNode.parentNode.children[1].remove()
+                            xterm.parentNode.parentNode.children[1].remove()
+                            console.warn('XesExt patched offline class')
+                        }
                         const term = new window.Terminal({
+                            rows: newref.xterm.term.rows,
+                            cols: newref.xterm.term.cols,
                             fontSize: 15,
                             fontFamily: '"Jetbrains Mono", "Fira Code", "Cascadia Code", "Noto Emoji", "Segoe UI Emoji", "Lucida Console", Menlo, courier-new, courier, monospace',
                             theme: xterm_theme,
@@ -338,17 +361,14 @@ function lightinit() {
                         // WebGL 加速
                         try {
                             try {
-                                const webgl = new window.WebglAddon.WebglAddon()
-                                term.loadAddon(webgl)
+                                term.loadAddon(new window.WebglAddon.WebglAddon())
                             } catch (_) {
-                                const canvas = new window.CanvasAddon.CanvasAddon()
-                                term.loadAddon(canvas)
+                                term.loadAddon(new window.CanvasAddon.CanvasAddon())
                             }
-                            const unicode = new window.Unicode11Addon.Unicode11Addon()
-                            // const ligatures = new window.LigaturesAddon.LigaturesAddon()
+                            // term.loadAddon(new window.LigaturesAddon.LigaturesAddon())
+                            term.loadAddon(new window.WebLinksAddon.WebLinksAddon())
+                            term.loadAddon(new window.Unicode11Addon.Unicode11Addon())
                             const fit = new window.FitAddon.FitAddon()
-                            term.loadAddon(unicode)
-                            // term.loadAddon(ligatures)
                             term.loadAddon(fit)
                             term.fit = () => fit.fit()
                             term.on = (e, f) => {
@@ -377,7 +397,7 @@ function lightinit() {
                                     }
                                 }
                             }
-                            for (const [key, value] of Object.entries(newref.xterm.term._core._events)) {
+                            for (const [key, value] of Object.entries(tmp)) {
                                 term.on(key, (...args) => {
                                     value.forEach(v => {
                                         v(...args)
@@ -403,7 +423,6 @@ function lightinit() {
                         })
                         // 修正滑动条占位
                         xterm.childNodes[0].overflowY = 'scroll'
-                        newref.xterm.close()
                         newref.xterm.term = term
                     }
                 } else {
