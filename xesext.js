@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.24
+// @version      0.1.25
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -370,13 +370,13 @@ function lightinit() {
     // 连字特性未启用 ('xterm-addon-ligatures.js') 原因:Lightpad
     // Woohoo, Keep me updated!
     ;[
-      'https://cdn.jsdelivr.net/npm/xterm@5.1.0/lib/xterm.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm-addon-webgl@0.14.0/lib/xterm-addon-webgl.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.8.0/lib/xterm-addon-web-links.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm-addon-canvas@0.3.0/lib/xterm-addon-canvas.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm-addon-unicode11@0.5.0/lib/xterm-addon-unicode11.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.7.0/lib/xterm-addon-fit.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm@5.1.0/css/xterm.css'
+      'https://cdn.jsdelivr.net/npm/xterm/lib/xterm.min.js',
+      'https://cdn.jsdelivr.net/npm/xterm-addon-webgl/lib/xterm-addon-webgl.min.js',
+      'https://cdn.jsdelivr.net/npm/xterm-addon-web-links/lib/xterm-addon-web-links.min.js',
+      'https://cdn.jsdelivr.net/npm/xterm-addon-canvas/lib/xterm-addon-canvas.min.js',
+      'https://cdn.jsdelivr.net/npm/xterm-addon-unicode11/lib/xterm-addon-unicode11.min.js',
+      'https://cdn.jsdelivr.net/npm/xterm-addon-fit/lib/xterm-addon-fit.min.js',
+      'https://cdn.jsdelivr.net/npm/xterm/css/xterm.css'
     ].forEach(e => {
       if (e.endsWith('.js')) {
         const script = document.createElement('script')
