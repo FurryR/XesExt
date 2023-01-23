@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.27
+// @version      0.1.28
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -454,8 +454,8 @@ function lightinit() {
       SPAM_FILTER = default_blocker
       window.localStorage.setItem('__xesext_blocker', SPAM_FILTER.toString())
     } else {
-      console.warn(`XesExt Switch blocker to ${config}`)
       SPAM_FILTER = new Function(`return ${config}`)()
+      console.warn('XesExt Switch blocker to', SPAM_FILTER)
     }
   } else {
     console.warn('XesExt Switch blocker to [default]')
@@ -546,7 +546,10 @@ function lightinit() {
       set(e) {
         const w = newref == undefined
         newref = e
-        if (w && newref.xterm != undefined) {
+        if (
+          newref.xterm != undefined &&
+          (w || !(newref.xterm.term instanceof window.Terminal))
+        ) {
           const tmp = {}
           for (const [key, value] of Object.entries(
             newref.xterm.term._core._events
