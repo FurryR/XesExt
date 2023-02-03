@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.28
+// @version      0.1.29
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -122,11 +122,6 @@ function lightinit() {
   if (keduo_wrapper) {
     console.warn('XesExt patched homePageKeduoGuide div')
     keduo_wrapper.remove()
-    const tagwork = document.getElementsByClassName('tagWorks-list-wrapper')
-    if (tagwork.length == 1) {
-      tagwork[0].style.marginTop = '-311px'
-    }
-    console.warn('XesExt patched tagWorks-list-wrapper')
     const cursorfollow = document.getElementById('home-component-cursor-follow')
     if (cursorfollow) {
       cursorfollow.childNodes[0].style.visibility = 'hidden'
@@ -134,6 +129,10 @@ function lightinit() {
         cursorfollow.childNodes.length - 1
       ].style.visibility = 'hidden'
     }
+  }
+  const tagwork = document.getElementsByClassName('tagWorks-list-wrapper')
+  if (tagwork.length == 1) {
+    tagwork[0].style.marginTop = '-311px'
   }
   const floorbarwrapper = document.getElementsByClassName('floor-bar-wrapper')
   if (floorbarwrapper.length == 1) {
@@ -360,6 +359,19 @@ function lightinit() {
     if (window.XesLoggerSDK) {
       console.warn('XesExt patched fn window.XesLoggerSDK')
       window.XesLoggerSDK = function () {}
+    }
+    /// 删除 WebPy 超时限制 by 凌
+    // 都离线了还阴魂不散？
+    if (window.Sk) {
+      Object.defineProperty(window.Sk, "execLimit", {
+        get: () => undefined,
+        set: () => undefined
+      })
+      Object.defineProperty(window.Sk, "yieldLimit", {
+        get: () => undefined,
+        set: () => undefined
+      })
+      console.warn('XesExt patched object window.Sk')
     }
     /// Light init
     document.body.addEventListener('DOMNodeInserted', () => lightinit())
