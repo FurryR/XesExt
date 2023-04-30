@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      2.0.0
+// @version      2.0.1
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -985,7 +985,7 @@ window.XesExt = {
           for (const v of fixed.data) {
             try {
               if (spam_filter(v)) c.push(v)
-            } catch (e) {
+            } catch (err) {
               logger.error(
                 `XesExt %cspam_filter%c 无法正确运行，因为拦截器发生错误。\n${err}`,
                 CODEFONT_CSS,
