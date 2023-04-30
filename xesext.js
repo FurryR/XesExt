@@ -1024,6 +1024,16 @@ window.XesExt = {
       }
     })
   })
+  plug.plug('unlimited_sign', '解除签名大小限制。', patch.document.load, () => {
+    const sign = document.getElementById('signatureInput')
+    if (sign) {
+      sign.attributes.removeNamedItem('maxLength')
+    }
+    const comment = document.getElementById('comment-box')
+    if (comment) {
+      comment.attributes.removeNamedItem('maxLength')
+    }
+  })
   plug.plug(
     'disable_log',
     '禁止对 console 的调用。',
@@ -1058,4 +1068,7 @@ window.XesExt = {
   )
   window.XesExt.enable()
   logger.warn('请使用 %cXesExt.help()%c 查看帮助。', CODEFONT_CSS, '')
+  logger.warn(
+    '提示: 我们不推荐您用 XesExt 的代码二开项目，这破坏了 XesExt 兼容性，是受到谴责的。\n如果你想为社区插件做出贡献，你可以写一个功能并提交，请参照相关帮助页面。'
+  )
 })()
