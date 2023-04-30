@@ -1027,11 +1027,15 @@ window.XesExt = {
   plug.plug('unlimited_sign', '解除签名大小限制。', patch.document.load, () => {
     const sign = document.getElementById('signatureInput')
     if (sign) {
+      try {
       sign.attributes.removeNamedItem('maxLength')
+      } catch (_) {}
     }
     const comment = document.getElementById('comment-box')
     if (comment) {
+      try {
       comment.attributes.removeNamedItem('maxLength')
+      } catch (_) {}
     }
   })
   plug.plug(
