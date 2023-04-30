@@ -17,5 +17,6 @@
 - 去除危险提示 by 凌
 - (独占)(Pro)(Beta) 作品屏蔽器(XesExt Spam Blocker) by 凌
 - 去除 webpy 运行超时 by 凌
+- 解除个人签名、评论长度限制 by 凌
 
 此脚本已经不再会影响到 iframe 中跟学而思无关的网站，无需跟此脚本进行适配。
