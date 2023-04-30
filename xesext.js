@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      0.1.29
+// @version      2.0.0
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -15,29 +15,6 @@
  * Copyright(c) 2021 FurryR
  * 此程序基于 GPL-3.0 开源。
  */
-// xterm-original from xtermjs.org
-const xterm_theme = {
-  foreground: '#F8F8F8',
-  background: '#2D2E2C',
-  selection: '#5DA5D533',
-  black: '#1E1E1D',
-  brightBlack: '#262625',
-  red: '#CE5C5C',
-  brightRed: '#FF7272',
-  green: '#5BCC5B',
-  brightGreen: '#72FF72',
-  yellow: '#CCCC5B',
-  brightYellow: '#FFFF72',
-  blue: '#5D5DD3',
-  brightBlue: '#7279FF',
-  magenta: '#BC5ED1',
-  brightMagenta: '#E572FF',
-  cyan: '#5DA5D5',
-  brightCyan: '#72F0FF',
-  white: '#F8F8F8',
-  brightWhite: '#FFFFFF',
-}
-let SPAM_FILTER = () => false
 // [审查用]取得直链
 function getScratchlink(id, version, type) {
   let ret = ''
@@ -73,7 +50,7 @@ function getPropertyByUrl() {
     return [
       /pid=[0-9]+/.exec(href)[0].substring('pid='.length),
       /version=([a-z]|[A-Z]|[0-9])+/.exec(href)[0].substring('version='.length),
-      'scratch',
+      'scratch'
     ]
   } else if (href.includes('/m/course-detail')) {
     // https://code.xueersi.com/m/course-detail?id=(...)&lang=(...)
@@ -86,7 +63,7 @@ function getPropertyByUrl() {
     return [
       /\/ide\/code\/[0-9]+/.exec(href)[0].substring('/ide/code/'.length),
       'cpp',
-      'cpp',
+      'cpp'
     ]
   } else if (href.includes('/project/publish/modal')) {
     // https://code.xueersi.com/project/publish/modal?pid=(...)&id=(...)&lang=(...)
@@ -116,86 +93,318 @@ function searchElem(elem, content) {
   }
   return matches
 }
-function lightinit() {
-  /// 删除猫博士的开眼课堂和老师们的作品[重制版] by 凌
-  const keduo_wrapper = document.getElementById('homePageKeduoGuide')
-  if (keduo_wrapper) {
-    console.warn('XesExt patched homePageKeduoGuide div')
-    keduo_wrapper.remove()
-    const cursorfollow = document.getElementById('home-component-cursor-follow')
-    if (cursorfollow) {
-      cursorfollow.childNodes[0].style.visibility = 'hidden'
-      cursorfollow.childNodes[
-        cursorfollow.childNodes.length - 1
-      ].style.visibility = 'hidden'
-    }
-  }
-  const tagwork = document.getElementsByClassName('tagWorks-list-wrapper')
-  if (tagwork.length == 1) {
-    tagwork[0].style.marginTop = '-311px'
-  }
-  const floorbarwrapper = document.getElementsByClassName('floor-bar-wrapper')
-  if (floorbarwrapper.length == 1) {
-    console.warn('XesExt patched floor-bar-wrapper div')
-    floorbarwrapper[0].remove()
+// xterm-original from xtermjs.org
+const xterm_theme = {
+  foreground: '#F8F8F8',
+  background: '#2D2E2C',
+  selection: '#5DA5D533',
+  black: '#1E1E1D',
+  brightBlack: '#262625',
+  red: '#CE5C5C',
+  brightRed: '#FF7272',
+  green: '#5BCC5B',
+  brightGreen: '#72FF72',
+  yellow: '#CCCC5B',
+  brightYellow: '#FFFF72',
+  blue: '#5D5DD3',
+  brightBlue: '#7279FF',
+  magenta: '#BC5ED1',
+  brightMagenta: '#E572FF',
+  cyan: '#5DA5D5',
+  brightCyan: '#72F0FF',
+  white: '#F8F8F8',
+  brightWhite: '#FFFFFF'
+}
+const CODEFONT_CSS =
+  'color: white; font-family: "Jetbrains Mono", "Fira Code", Consolas, "Courier New", monospace'
+const logger = {
+  warn: console.warn,
+  clear: console.clear,
+  error: console.error,
+  table: console.table,
+  trace: console.trace
+}
+const patch = {
+  document: {
+    /**
+     * 在页面加载完毕后的触发器。
+     * @param {() => void} fn
+     */
+    load: fn => void document.addEventListener('load', fn, true),
+    /**
+     * 在页面加载前的触发器。
+     * @param {() => void} fn
+     */
+    start: fn => void fn(),
+    /**
+     * 在页面插入节点之后触发。
+     * @param {(ev: AnimationEvent) => void} fn
+     */
+    DOMNodeInserted: fn =>
+      void document.addEventListener(
+        'DOMNodeInserted',
+        ev => {
+          // if (ev.animationName == 'nodeInserted') {
+          fn(ev)
+          // }
+        },
+        true
+      )
+  },
+  XMLHttpRequest: {
+    /**
+     * 拦截 XMLHttpRequest。
+     * @param {(fn: (method: string, url: string | URL) => void) => void} fn
+     */
+    open: fn => void fn(window.XMLHttpRequest.prototype.open)
   }
 }
-;(function () {
-  if (window.location.href.indexOf('xueersi.com') == -1) {
-    console.warn(`XesExt prevented in ${window.loadtion.href}`)
+/**
+ * 获得默认配置。
+ * @returns 默认配置。
+ */
+function default_config() {
+  return {
+    disabled: [],
+    option: {}
+  }
+}
+let XesExt_config = default_config()
+class PluginManager {
+  /**
+   * 获得名为 id 的设置，若找不到则以 value 顶替。
+   * @param {id} id 设置 id。
+   * @param {any} value 顶替的值。
+   * @returns {any} 设置的值。
+   */
+  get_option_or(id, value) {
+    if (XesExt_config.option[id] !== undefined) {
+      return XesExt_config.option[id]
+    }
+    XesExt_config.option[id] = value
+    window.localStorage.setItem('XesExt', JSON.stringify(XesExt_config))
+    return value
+  }
+  /**
+   * 重设 ID 为 id 的设置为指定值。
+   * @param {string} id 设定 id。
+   * @param {any} value 设定的值。
+   */
+  set_option(id, value) {
+    XesExt_config.option[id] = value
+    window.localStorage.setItem('XesExt', JSON.stringify(XesExt_config))
+  }
+  /**
+   * 注册功能。
+   * @param {string} id 功能的 ID。
+   * @param {string} description 功能的人类可读描述。
+   * @param {Function} patcher 补丁器。
+   * @param {Function} fn 功能本体函数。
+   */
+  plug(id, description, patcher, fn) {
+    this._events[id] = [description, patcher, fn]
+  }
+  /**
+   * 完成注册，开始加载 XesExt。
+   */
+  done() {
+    const v = XesExt_config.disabled
+    if (!v instanceof Array) {
+      logger.error('XesExt 加载失败。请检查配置文件是否设置正确。')
+      return
+    }
+    for (const [key, value] of Object.entries(this._events)) {
+      if (!v.includes(key)) {
+        logger.warn(`XesExt 正在加载功能 %c${key}%c。`, CODEFONT_CSS, '')
+        value[1](value[2])
+      }
+    }
+  }
+  constructor() {
+    this._events = {}
+  }
+}
+const plug = new PluginManager()
+window.XesExt = {
+  /**
+   * 获得帮助。
+   * @param {string | undefined} 帮助 ID。不填则查看全部。
+   */
+  help(obj = undefined) {
+    if (obj == undefined) {
+      logger.warn('XesExt v2 帮助')
+      logger.warn(
+        '警告: XesExt v2 和 XesExt 不兼容。在更新后，可能需要重新设置所有配置。'
+      )
+      logger.warn('所有条目:')
+      logger.table({
+        enable_plugin: '关于启用/关闭功能的方法',
+        option: '关于设置',
+        development: '关于如何开发功能'
+      })
+      logger.warn(
+        '请输入 %clogger.warn("条目 ID")%c 来查看相应条目的帮助。',
+        CODEFONT_CSS,
+        ''
+      )
+    } else if (obj == 'enable_plugin') {
+      logger.warn(
+        '以下是 XesExt 对象中 %cenable/disable%c 方法参数的说明。',
+        CODEFONT_CSS,
+        ''
+      )
+      logger.table({
+        id: '可选，需启用/禁用功能的 ID。若不指定，则会打印目前启用/禁用的全部功能。'
+      })
+    } else if (obj == 'option') {
+      logger.warn('%cXesExt.option%c 可以获取/更改设置内容。', CODEFONT_CSS, '')
+      logger.warn('以下是 XesExt 对象中 option 方法参数的说明。')
+      logger.table({
+        id: '可选，需设定的设置 id。不指定时，打印全部设置。',
+        value: '可选，需设定的设置值。不指定时，返回这个 id 的设置。'
+      })
+    } else if (obj == 'development') {
+      logger.warn('%cplug.plug%c 可以注册一个功能。', CODEFONT_CSS, '')
+      logger.warn('以下是 plug 对象中 plug 方法参数的说明。')
+      logger.table({
+        id: '功能的 ID。',
+        description: '功能的人类可读描述。',
+        patcher:
+          '补丁器。在本插件中预置有 2 个补丁器 "patch.document" 和 "patch.XMLHttpRequest"，用于给相应的方法/事件打上补丁。这些补丁器都需要一个函数作为参数，并且会将函数以一定的方式注册到某个事件上，或者直接调用。',
+        fn: '功能本体函数。对于函数的补丁，第一个参数为原函数，可以用来作为覆盖函数时当作原函数调用。'
+      })
+    } else {
+      logger.warn('无法找到条目。请确认您的拼写。')
+    }
+  },
+  /**
+   * 禁用功能。当没有参数时，查看已经禁用的功能列表。
+   * @param {string[]} args 禁用的功能 ID。
+   */
+  disable(...args) {
+    if (args.length == 0) {
+      {
+        const v = XesExt_config.disabled,
+          v2 = {}
+        if (!v instanceof Array) {
+          logger.error('XesExt 加载失败。请检查配置文件是否设置正确。')
+          return
+        }
+        if (v.length != 0) {
+          logger.warn('已经禁用的功能:')
+          for (const key of v) {
+            v2[key] = plug._events[key][0]
+          }
+          logger.table(v2)
+        } else {
+          logger.warn('尚未禁用任何功能。')
+        }
+      }
+      return
+    }
+    for (const id of args) {
+      if (!XesExt_config.disabled.includes(id)) {
+        XesExt_config.disabled.push(id)
+      }
+      window.localStorage.setItem('XesExt', JSON.stringify(XesExt_config))
+      logger.warn(`XesExt 已经禁用了 %c${id}%c。`, CODEFONT_CSS, '')
+    }
+    logger.warn('将在 %c3s%c 后刷新网页以应用更改。', CODEFONT_CSS, '')
+    setTimeout(() => window.location.reload(), 3000)
+  },
+  /**
+   * 启用功能。
+   * @param {string[]} args 启用的功能 ID。
+   */
+  enable(...args) {
+    if (args.length == 0) {
+      {
+        const v = XesExt_config.disabled,
+          v2 = {}
+        if (!v instanceof Array) {
+          logger.error('XesExt 加载失败。请检查配置文件是否设置正确。')
+          return
+        }
+        if (v.length != Object.keys(plug._events).length) {
+          logger.warn('已经启用的功能:')
+          for (const [key, value] of Object.entries(plug._events)) {
+            if (!v.includes(key)) {
+              v2[key] = value[0]
+            }
+          }
+          logger.table(v2)
+        } else {
+          logger.warn('尚未启用任何功能。')
+        }
+      }
+      return
+    }
+    for (const id of args) {
+      XesExt_config.disabled = XesExt_config.disabled.filter(val => val != id)
+      window.localStorage.setItem('XesExt', JSON.stringify(XesExt_config))
+      logger.warn(`XesExt 已经启用了 %c${id}%c。`, CODEFONT_CSS, '')
+    }
+    logger.warn('将在 %c3s%c 后刷新网页以应用更改。', CODEFONT_CSS, '')
+    setTimeout(() => window.location.reload(), 3000)
+  },
+  /**
+   * 获得 XesExt 设置。
+   * @param {string | undefined} id 设置的 ID。
+   * @param {string | undefined} value 设置的值。
+   */
+  option(...args) {
+    if (args.length == 0) {
+      logger.warn('XesExt 设置:')
+      logger.table(XesExt_config.option)
+      return
+    }
+    if (args.length == 1) {
+      return XesExt_config.option[args[0]]
+    }
+    XesExt_config.option[args[0]] = args[1]
+    window.localStorage.setItem('XesExt', JSON.stringify(XesExt_config))
+    logger.warn(
+      `XesExt 已经设置了 %c${args[0]}%c 为 %c${args[1]}%c。`,
+      CODEFONT_CSS,
+      '',
+      CODEFONT_CSS,
+      ''
+    )
+    logger.warn('将在 %c3s%c 后刷新网页以应用更改。', CODEFONT_CSS, '')
+    setTimeout(() => window.location.reload(), 3000)
+  }
+}
+;(() => {
+  if (!window.location.hostname.includes('xueersi.com')) {
+    logger.warn(`XesExt 将不在 ${window.location.href} 内运行。`)
+    delete window.XesExt
     return
   }
-  window.addEventListener('load', () => {
-    console.warn('XesExt init')
-    // [独占][Pro][Beta] XesExt Spam Blocker by 凌
-    const tooltip = document.getElementsByClassName('tag-tooltip')
-    if (tooltip.length == 1) {
-      console.warn('XesExt patched tag-tooltip btn')
-      tooltip[0].replaceWith(tooltip[0].cloneNode(true))
-      tooltip[0].title = 'XesExt Spam Blocker'
-      tooltip[0].addEventListener('click', (ev) => {
-        const t = prompt(
-          `输入新的拦截器(留空重置为默认):`,
-          SPAM_FILTER.toString()
-        )
-        if (t == '') {
-          if (confirm('你确定要重置为默认拦截器？\n原有的拦截器将丢失！')) {
-            window.localStorage.setItem('__xesext_blocker', '')
-            window.location.reload()
-          }
-        }
-        if (t) {
-          let r = null
-          try {
-            r = new Function(`return ${t};`)()
-            if (!r instanceof Function) {
-              throw null
-            }
-          } catch (_) {
-            alert('拦截器语法不正确。')
-            ev.preventDefault()
-            return
-          }
-          window.localStorage.setItem('__xesext_blocker', r.toString())
-          window.location.reload()
-        }
-        ev.preventDefault()
-      })
+  {
+    logger.warn('XesExt 正在加载配置。')
+    let v = window.localStorage.getItem('XesExt')
+    if (v == null) {
+      window.localStorage.setItem('XesExt', JSON.stringify(XesExt_config))
+    } else {
+      try {
+        XesExt_config = JSON.parse(v)
+      } catch (_) {
+        window.localStorage.setItem('XesExt', JSON.stringify(XesExt_config))
+      }
     }
-    /// 变更改编按钮行为 by 凌
+  }
+  plug.plug('adapt', '变更改编按钮行为。', patch.document.load, () => {
     const adaptButton = document.getElementsByClassName('adapt')
     if (adaptButton.length == 1) {
-      console.warn('XesExt patched adapt btn')
       adaptButton[0].replaceWith(adaptButton[0].cloneNode(true))
       adaptButton[0].childNodes[1].data = ' 审查 '
-      adaptButton[0].addEventListener('click', (ev) => {
+      adaptButton[0].addEventListener('click', ev => {
         window.open(getScratchlink.apply(null, getPropertyByUrl()), '_blank')
         ev.preventDefault()
       })
     } else {
       const notAllowAdaptButton = document.getElementsByClassName('tooltip')
       if (notAllowAdaptButton.length == 1) {
-        console.warn('XesExt patched disabled adapt btn')
         notAllowAdaptButton[0].replaceWith(
           notAllowAdaptButton[0].cloneNode(true)
         )
@@ -216,7 +425,7 @@ function lightinit() {
         }
         document
           .getElementsByClassName('adapt')[0]
-          .addEventListener('click', (ev) => {
+          .addEventListener('click', ev => {
             window.open(
               getScratchlink.apply(null, getPropertyByUrl()),
               '_blank'
@@ -225,29 +434,41 @@ function lightinit() {
           })
       }
     }
-    /// 删除社区公约 by 凌
+  })
+  plug.plug('remove_rule', '删除社区公约。', patch.document.load, () => {
     const rule = document.getElementsByClassName('rule')
     if (rule.length == 1) {
-      console.warn('XesExt patched rule btn')
       rule[0].remove()
     }
-    /// [编辑器模式] 去除模板按钮 by 凌
-    const btn = searchElem('a', ' 模板 ')
-    if (btn.length == 1) {
-      console.warn('XesExt patched template btn')
-      btn[0].remove()
+  })
+  plug.plug(
+    'remove_template',
+    '[编辑器模式] 删除模板按钮。',
+    patch.document.load,
+    () => {
+      const btn = searchElem('a', ' 模板 ')
+      if (btn.length == 1) {
+        btn[0].remove()
+      }
     }
-    /// [编辑器模式] 去除编程百科按钮 by 凌
-    const wiki = searchElem('a', ' 编程百科 ')
-    if (wiki.length == 1) {
-      console.warn('XesExt patched wiki btn')
-      wiki[0].remove()
+  )
+  plug.plug(
+    'remove_textsize',
+    '删除字体大小按钮。',
+    patch.document.load,
+    () => {
+      const textsize = document.getElementsByClassName('btn-font-size')
+      if (textsize.length == 1) {
+        if (!window.location.pathname.startsWith('/ide/code/')) {
+          textsize[0].remove()
+        }
+      }
     }
-    /// 删除或替换字体大小按钮 by 凌
-    /// 注：在编辑器模式下，字体大小按钮将被替换为主题按钮。
+  )
+  plug.plug('theme', '[编辑器模式] 更换主题。', patch.document.load, () => {
+    // 更换字体大小按钮
     const textsize = document.getElementsByClassName('btn-font-size')
     if (textsize.length == 1) {
-      console.warn('XesExt patched textsize div')
       if (
         window.aceEditor &&
         window.location.pathname.startsWith('/ide/code/')
@@ -257,28 +478,24 @@ function lightinit() {
         }
         textsize[0].replaceWith(textsize[0].cloneNode(true))
         textsize[0].textContent = ' T '
-        textsize[0].addEventListener('click', (ev) => {
+        textsize[0].addEventListener('click', ev => {
           const t = prompt(
             `输入新的主题 ID(比如 ace/theme/tomorrow_night):`,
             window.aceEditor.getTheme()
           )
           if (t) {
-            console.warn(`XesExt Switch theme to ${t}`)
-            window.localStorage.setItem('__xesext_theme', t)
+            plug.set_option('theme', t)
             window.aceEditor.setTheme(t)
           }
           ev.preventDefault()
         })
-      } else {
-        textsize[0].remove()
       }
     }
-    /// [独占][Pro][编辑器模式] 更换主题 by 凌
+    // 破解 aceEditor
     const editor = document.getElementsByClassName(
       'ace-editor tile is-child box ace_editor ace-tm'
     )
     if (editor.length == 1) {
-      console.warn('XesExt patched editor div')
       editor[0].attributes.removeNamedItem(editor[0].attributes[0].name)
       editor[0].className = 'ace-editor tile is-child ace_editor ace-tm'
     }
@@ -286,7 +503,6 @@ function lightinit() {
       'ace_layer ace_gutter-layer'
     )
     if (gutterLayer.length == 1) {
-      console.warn('XesExt patched gutter-layer div')
       gutterLayer[0].style.textAlign = 'right'
       gutterLayer[0].className = gutterLayer[0].className.replace(
         'ace_gutter-layer',
@@ -295,486 +511,551 @@ function lightinit() {
     }
     // 从 localStorage 读入
     if (window.aceEditor) {
-      console.warn('XesExt patched ace editor')
-      const g = window.localStorage.getItem('__xesext_theme')
-      if (g) {
-        console.warn(`XesExt Switch theme to ${g}`)
-        window.aceEditor.setTheme(g)
-      } else {
-        console.warn('XesExt Switch theme to ace/theme/tomorrow_night')
-        window.localStorage.setItem(
-          '__xesext_theme',
-          'ace/theme/tomorrow_night'
-        )
-        window.aceEditor.setTheme('ace/theme/tomorrow_night')
-      }
+      const g = plug.get_option_or('theme', 'ace/theme/tomorrow_night')
+      window.aceEditor.setTheme(g)
     }
-    /// [独占][作品模式]防止强制点赞
+  })
+  plug.plug('anti_autolike', '防止自动点赞。', patch.document.load, () => {
     const likebtn = document.querySelector('.like')
     if (likebtn) {
-      console.warn('XesExt patched like btn')
       likebtn.click = () => {
-        console.error('XesExt 检测到点赞按钮被触发。此作品可能含有刷赞代码。')
+        logger.trace('XesExt 检测到点赞按钮被触发。此作品可能含有刷赞代码。')
       }
     }
     const favbtn = document.querySelector('.favorites')
     if (favbtn) {
-      console.warn('XesExt patched favorite btn')
       favbtn.click = () => {
-        console.error('XesExt 检测到收藏按钮被触发。此作品可能含有刷赞代码。')
+        logger.trace('XesExt 检测到收藏按钮被触发。此作品可能含有刷赞代码。')
       }
     }
     const followbtn = document.querySelector('.focus-btn')
     if (followbtn) {
-      console.warn('XesExt patched follow btn')
       followbtn.click = () => {
-        console.error('XesExt 检测到关注按钮被触发。此作品可能含有刷赞代码。')
+        logger.trace('XesExt 检测到关注按钮被触发。此作品可能含有刷赞代码。')
       }
     }
-    /// 更好的反跟踪 by 凌
-    if (window.logger) {
-      console.warn('XesExt patched object logger')
-      for (const v in window.logger) {
-        window.logger[v] = () => {}
-      }
-    }
-    if (window.__XES_LOG__) {
-      console.warn('XesExt patched object __XES_LOG__')
-      for (const v in window.__XES_LOG__) {
-        window.__XES_LOG__[v] = () => {}
-      }
-    }
-    if (window.XesInstance) {
-      console.warn('XesExt patched object XesInstance')
-      for (const v in window.XesInstance) {
-        window.XesInstance[v] = () => {}
-      }
-    }
-    if (window.Xes) {
-      console.warn('XesExt patched object Xes')
-      for (const v in window.Xes) {
-        window.Xes[v] = () => {}
-      }
-    }
-    if (window.XesLoggerSDK) {
-      console.warn('XesExt patched fn window.XesLoggerSDK')
-      window.XesLoggerSDK = function () {}
-    }
-    /// 删除 WebPy 超时限制 by 凌
-    // 都离线了还阴魂不散？
-    if (window.Sk) {
-      Object.defineProperty(window.Sk, "execLimit", {
-        get: () => undefined,
-        set: () => undefined
-      })
-      Object.defineProperty(window.Sk, "yieldLimit", {
-        get: () => undefined,
-        set: () => undefined
-      })
-      console.warn('XesExt patched object window.Sk')
-    }
-    /// Light init
-    document.body.addEventListener('DOMNodeInserted', () => lightinit())
-    lightinit()
-    /// 初始化完成
-    console.warn('XesExt post-init')
   })
-  console.warn('XesExt pre-init')
-  /// 更好的反跟踪 提前初始化 by 凌
-  /// 去开屏广告 by 凌
-  /// [独占][Pro][Beta] XesExt Spam Blocker by 凌
-  /// [独占][Pro] 访问已删除的作品 by 凌
-  /// 去除危险提示 by 凌
-  /// 删除猫博士的开眼课堂和老师们的作品[重制版] by 凌
-  // 从 localStorage 读入过滤器
-  // 社区贵物屏蔽器 第一版
-  const default_blocker = (data) => {
-    /** --check-for-default-updates **/
-    return (
-      data.name.includes('随堂') || // 过滤随堂测其一
-      data.name.includes('脑洞大开') || // 过滤随堂测其二
-      data.name.includes('模板') || // 过滤低质量模板
-      data.name.includes('黑化') || // 过滤火化小学生
-      data.name.includes('我的世界') || // 过滤我的世界小学生
-      data.name.toLowerCase().includes('minecraft') || // 要玩你的Minecraft去minebbs玩
-      data.name.toLowerCase().includes('mc') || // MC批会不会好好打字？
-      data.name.includes('原神') || // 任何OP都将被绳之以法
-      data.name.toLowerCase().includes('phigros') || // 臀批过滤
-      data.name.toLowerCase().includes('pgr') || // 臀批会不会好好打字？
-      data.name.includes('波兰球') || // 感觉不如福瑞其一
-      data.name.includes('火柴人') || // 感觉不如福瑞其二
-      data.name.includes('专跑') || // 只会照着模板改的贵物们其一
-      data.name.includes('一直向上') || // 只会照着模板改的贵物们其二
-      data.name.includes('跑酷') || // 玩腻了捏
-      data.name.includes('新年快乐') || // 狠狠地引流
-      data.name.includes('新春快乐') || // 这个也NG
-      data.name.includes('植物大战僵尸') || // 过滤 PVZ 小鬼
-      data.name.toLowerCase().includes('pvz') || // 爬
-      data.name.toLowerCase().includes('undertale') || // 卧槽，疣体小鬼！
-      data.name.toLowerCase().includes('ut') || // y疣体小鬼会不会好好打字？
-      data.name.includes('太空杀') || // 给 among us 留了条生路
-      data.name.includes('三体') || // 电工文库
-      data.name.toLowerCase().includes('three body') || // 电工文库其二
-      data.name.includes('音游') || // 要玩音游怎么不去音游交流群？
-      data.name.includes('后室') || // 后室小鬼实体较多，注意避让
-      data.name.includes('封面') || // 音容宛在 ，笑貌永存。
-      data.name.toLowerCase().includes('dream') || // dream和猪神比赛打胶...
-      data.name.toLowerCase().includes('technoblade') || // dream阴猪神，猪神快要输了
-      data.name.toLowerCase().includes('猪神') || // 发送身份证号即可为猪神打call！！！111
-      data.name.includes('俄国') || // 卧槽，俄苏啊！其一
-      data.name.includes('德国') || // 卧槽，俄苏啊！其二
-      data.name.includes('达瓦里氏') || // 卧槽，俄苏啊！其三
-      data.name.includes('迷你') || // 过滤迷你世界小学生
-      data.name.toLowerCase().includes('mn') || // MC卫兵会不会好好打字？
-      data.name.includes('图形化编程') || // 过滤小朋友
-      data.name.includes('五凌') || // 蹭热度
-      data.name.includes('四会') || // 蹭热度
-      data.name.includes('凌之联邦') || // 蹭热度
-      data.name.includes('逆天') || // 中二贵物大杂烩
-      data.name.toLowerCase().includes('hello world') || // 默认作品
-      data.name.toLowerCase().includes('hello webpy') || // 默认作品其二
-      data.name.toLowerCase().includes('Python基础') || // 默认作品其三
-      data.name.includes('模拟器') || // 要模拟去自己站里模拟
-      data.name.includes('超级马里奥') || // DMCA警告
-      data.name.includes('主页') || // 网络灵堂？
-      data.user_id == 78180318 || // 低创贵物大杂烩
-      data.user_id == 2842899 || // 满门抄斩(死因：标题党/成果剽窃/音游小鬼)
-      data.user_id == 32231990 || // 编程中级高手其一(死因：C++操作符重载怎么写？)
-      data.user_id == 16944115 || // 编程中级高手其一(死因：自制编程语言)
-      data.user_id == 4947453 || // 跳脚大神(死因：社区公会)
-      data.user_id == 69325668 || // 编程中级高手其四(死因：代码质量极差，bug太多而在他人作品跳脚)
-      data.user_id == 45751200 || // 快速的OP连跳
-      data.user_id == 77695337 || // 社区过家家其一
-      data.user_id == 73424254 || // 社区过家家其二
-      data.user_id == 12907647 || // 编程中级高手正主(死因：质量低而无脑粉丝多，更倡导错误代码习惯，误导他人)
-      data.user_id == 44673885
-    ) // 编程中级高手 Extra(死因：跳脚/严重的技术断层)
-  }
-  // 以下是废案：
-  // data.user_id != 17025146 // 编程中级高手其三(死因：git水平有待提高)
-  // data.user_id != 13104104 // 红豆大神(死因：社区公会)
-  const config = window.localStorage.getItem('__xesext_blocker')
-  if (config) {
-    if (
-      config.includes('--check-for-default-updates') &&
-      config != default_blocker.toString() &&
-      confirm(
-        '检测到您的默认屏蔽器和官方版本不同。\n是否需要更新到最新版本的屏蔽器？'
-      )
-    ) {
-      console.warn('XesExt Switch blocker to [default]')
-      SPAM_FILTER = default_blocker
-      window.localStorage.setItem('__xesext_blocker', SPAM_FILTER.toString())
-    } else {
-      SPAM_FILTER = new Function(`return ${config}`)()
-      console.warn('XesExt Switch blocker to', SPAM_FILTER)
+  plug.plug('xterm', '启用 xterm.js v5 支持。', patch.document.start, () => {
+    const project = getPropertyByUrl()
+    if (project) {
+      // 连字特性未启用 ('xterm-addon-ligatures.js') 原因:Lightpad
+      // Woohoo, Keep me updated!
+      ;[
+        'https://cdn.jsdelivr.net/npm/xterm/lib/xterm.min.js',
+        'https://cdn.jsdelivr.net/npm/xterm-addon-webgl/lib/xterm-addon-webgl.min.js',
+        'https://cdn.jsdelivr.net/npm/xterm-addon-web-links/lib/xterm-addon-web-links.min.js',
+        'https://cdn.jsdelivr.net/npm/xterm-addon-canvas/lib/xterm-addon-canvas.min.js',
+        'https://cdn.jsdelivr.net/npm/xterm-addon-unicode11/lib/xterm-addon-unicode11.min.js',
+        'https://cdn.jsdelivr.net/npm/xterm-addon-fit/lib/xterm-addon-fit.min.js',
+        'https://cdn.jsdelivr.net/npm/xterm/css/xterm.css'
+      ].forEach(e => {
+        if (e.endsWith('.js')) {
+          const script = document.createElement('script')
+          script.src = e
+          document.head.appendChild(script)
+        } else {
+          const css = document.createElement('link')
+          css.href = e
+          css.type = 'text/css'
+          css.rel = 'stylesheet'
+          document.head.appendChild(css)
+        }
+      })
+      let newref = undefined
+      Object.defineProperty(window, 'refWsTerm', {
+        get() {
+          if (newref == undefined || newref.xterm == undefined) {
+            newref = {}
+            let newterm = undefined
+            Object.defineProperty(newref, 'xterm', {
+              get() {
+                return newterm
+              },
+              set(e) {
+                newterm = e
+                window.refWsTerm = window.refWsTerm
+              }
+            })
+          }
+          return newref
+        },
+        set(e) {
+          const w = newref == undefined
+          newref = e
+          if (
+            newref.xterm != undefined &&
+            (w || !(newref.xterm.term instanceof window.Terminal))
+          ) {
+            const tmp = {}
+            for (const [key, value] of Object.entries(
+              newref.xterm.term._core._events
+            )) {
+              if (!tmp[key]) tmp[key] = []
+              value.forEach(v => {
+                tmp[key].push(v)
+              })
+            }
+            newref.xterm.close()
+            const xterm = document.getElementById('terminal')
+            if (xterm) {
+              // 背景修补
+              xterm.style.backgroundColor =
+                xterm.parentNode.style.backgroundColor = xterm_theme.background
+              const term = new window.Terminal({
+                rows: newref.xterm.term.rows,
+                cols: newref.xterm.term.cols,
+                fontSize: 15,
+                fontFamily:
+                  '"Jetbrains Mono", "Fira Code", "Cascadia Code", "Noto Emoji", "Segoe UI Emoji", "Lucida Console", Menlo, courier-new, courier, monospace',
+                theme: xterm_theme,
+                cursorBlink: true,
+                allowProposedApi: true
+              })
+              term.open(xterm)
+              // WebGL 加速
+              try {
+                // 检查是否支持 WebGL
+                const canvas = document.createElement('canvas')
+                const gl =
+                  canvas.getContext('webgl') ||
+                  canvas.getContext('experimental-webgl')
+                if (gl instanceof WebGLRenderingContext) {
+                  try {
+                    term.loadAddon(new window.WebglAddon.WebglAddon())
+                  } catch (_) {
+                    term.loadAddon(new window.CanvasAddon.CanvasAddon())
+                    logger.error(
+                      'XesExt %cxterm%c 无法正常使用 %cWebGL%c 作为渲染器。这可能是一个内部错误，请收集信息发送给 %cxterm-js%c。',
+                      CODEFONT_CSS,
+                      '',
+                      CODEFONT_CSS,
+                      '',
+                      CODEFONT_CSS,
+                      ''
+                    )
+                  }
+                } else {
+                  logger.error(
+                    'XesExt %cxterm%c 正在使用 %cCanvas%c 作为渲染器，因为你的浏览器不支持 %cWebGL%c 特性。Canvas 渲染器可能渲染和 %cWebGL%c 不一致，并且速度更低。',
+                    CODEFONT_CSS,
+                    '',
+                    CODEFONT_CSS,
+                    '',
+                    CODEFONT_CSS,
+                    '',
+                    CODEFONT_CSS,
+                    ''
+                  )
+                  term.loadAddon(new window.CanvasAddon.CanvasAddon())
+                }
+                // term.loadAddon(new window.LigaturesAddon.LigaturesAddon())
+                term.loadAddon(new window.WebLinksAddon.WebLinksAddon())
+                term.loadAddon(new window.Unicode11Addon.Unicode11Addon())
+                const fit = new window.FitAddon.FitAddon()
+                term.loadAddon(fit)
+                term.fit = () => fit.fit()
+                let _ev = {}
+                term.on = (e, f) => {
+                  // 为以前版本的兼容性作处理。
+                  switch (e) {
+                    case 'data': {
+                      const l = term.onData(f)
+                      if (_ev[e] == undefined) {
+                        _ev[e] = [l]
+                      } else {
+                        _ev[e].push(l)
+                      }
+                      break
+                    }
+                    case 'resize': {
+                      const l = term.onResize(f)
+                      if (_ev[e] == undefined) {
+                        _ev[e] = [l]
+                      } else {
+                        _ev[e].push(l)
+                      }
+                      break
+                    }
+                  }
+                }
+                term.off = () => {
+                  // 为以前版本的兼容性作处理。
+                  // if (_ev[e] != undefined) {
+                  //     for (const v of _ev[e]) {
+                  //         v.dispose()
+                  //     }
+                  //     _ev[e] = []
+                  // }
+                  // 可惜的是，学而思前端太蠢了忘记了重新注册事件，因此我们完全不做处理。
+                }
+                for (const [key, value] of Object.entries(tmp)) {
+                  term.on(key, (...args) => {
+                    value.forEach(v => {
+                      v(...args)
+                    })
+                  })
+                }
+                term.setOption = (k, v) => {
+                  // 为以前版本的兼容性作处理。
+                  term.options[k] = v
+                }
+                term.unicode.activeVersion = '11'
+              } catch (e) {
+                logger.error(
+                  `XesExt %cxterm%c 无法加载，因为无法加载功能。\n${e}`,
+                  CODEFONT_CSS,
+                  ''
+                )
+              }
+              // 阻止滚轮事件滚动页面
+              xterm.childNodes[0].addEventListener('wheel', e => {
+                // if (term.buffer.active.baseY > 0) {
+                e.preventDefault()
+                // }
+              })
+              xterm.addEventListener('wheel', e => {
+                e.preventDefault()
+              })
+              // 修正居中问题
+              xterm.childNodes[0].style.textAlign = 'left'
+              newref.xterm.term = term
+            }
+          }
+        }
+      })
     }
-  } else {
-    console.warn('XesExt Switch blocker to [default]')
-    SPAM_FILTER = default_blocker
-    window.localStorage.setItem('__xesext_blocker', SPAM_FILTER.toString())
-  }
-  console.warn('XesExt patched object XMLHttpRequest')
-  const _open = window.XMLHttpRequest.prototype.open
-  const project = getPropertyByUrl()
-  const _base_open = function (e, t, n) {
-    if (t.includes('dj.xesimg.com')) {
-      console.warn('XesExt patched dj.xesimg.com XHR')
-      _open.call(this, e, (this.__xes_url = 'data:application/json,{}'), n)
-    } else if (t.startsWith('/api/pop/show/')) {
-      console.warn('XesExt patched /api/pop/show XHR')
-      _open.call(
-        this,
-        e,
-        (this.__xes_url =
-          'data:application/json,{"stat":1,"status":1,"msg":"","data":{"id":-1,"type":"normal","ads":[],"force":0,"open":1}}'),
-        n
-      )
-    } else if (t.startsWith('/api/index/works/modules')) {
-      console.warn('XesExt patched /api/index/works/modules XHR')
-      _open.call(
-        this,
-        e,
-        (this.__xes_url =
-          'data:application/json,{"stat":1,"status":1,"msg":"","data":[{"title":"可多推荐","simple_title":"可多推荐","lines":2,"items":[]},{"title":"我的关注","simple_title":"我的关注","lines":2,"items":[]},{"title":"猜你喜欢","simple_title":"猜你喜欢","lines":2,"items":[]}]}'),
-        n
-      )
-    } else if (t.startsWith('/api/compilers/danger_level')) {
-      console.warn('XesExt patched /api/compilers/danger_level XHR')
-      _open.call(
-        this,
-        e,
-        (this.__xes_url =
-          'data:application/json,{"stat":1,"status":1,"msg":"","data":{"result":null}}')
-      )
-    } else {
-      _open.call(this, e, t, n)
+  })
+  plug.plug(
+    'no_ads',
+    '拦截全部跟踪器和广告。',
+    patch.XMLHttpRequest.open,
+    _open => {
+      window.XMLHttpRequest.prototype.open = function (e, t, n) {
+        if (t.includes('appid') && t.endsWith('.gif')) {
+          _open.call(this, e, 'data:application/json,{}', n)
+        } else if (t.startsWith('/api/pop/show/')) {
+          _open.call(
+            this,
+            e,
+            'data:application/json,{"stat":1,"status":1,"msg":"","data":{"id":-1,"type":"normal","ads":[],"force":0,"open":1}}',
+            n
+          )
+        } else if (t.startsWith('/api/index/works/modules')) {
+          _open.call(
+            this,
+            e,
+            'data:application/json,{"stat":1,"status":1,"msg":"","data":[{"title":"可多推荐","simple_title":"可多推荐","lines":2,"items":[]},{"title":"我的关注","simple_title":"我的关注","lines":2,"items":[]},{"title":"猜你喜欢","simple_title":"猜你喜欢","lines":2,"items":[]}]}',
+            n
+          )
+        } else if (t.startsWith('/api/compilers/danger_level')) {
+          _open.call(
+            this,
+            e,
+            'data:application/json,{"stat":1,"status":1,"msg":"","data":{"result":null}}'
+          )
+        } else {
+          _open.call(this, e, t, n)
+        }
+      }
     }
-  }
-  if (project) {
-    console.warn('XesExt is running in project page')
-    /// [独占][Pro] 升级 xterm by 凌
-    // 连字特性未启用 ('xterm-addon-ligatures.js') 原因:Lightpad
-    // Woohoo, Keep me updated!
-    ;[
-      'https://cdn.jsdelivr.net/npm/xterm/lib/xterm.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm-addon-webgl/lib/xterm-addon-webgl.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm-addon-web-links/lib/xterm-addon-web-links.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm-addon-canvas/lib/xterm-addon-canvas.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm-addon-unicode11/lib/xterm-addon-unicode11.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm-addon-fit/lib/xterm-addon-fit.min.js',
-      'https://cdn.jsdelivr.net/npm/xterm/css/xterm.css',
-    ].forEach((e) => {
-      if (e.endsWith('.js')) {
-        const script = document.createElement('script')
-        script.src = e
-        document.head.appendChild(script)
-      } else {
-        const css = document.createElement('link')
-        css.href = e
-        css.type = 'text/css'
-        css.rel = 'stylesheet'
-        document.head.appendChild(css)
+  )
+  plug.plug(
+    'hidden_work',
+    '允许访问已经被删除的作品。',
+    patch.XMLHttpRequest.open,
+    _open => {
+      const project = getPropertyByUrl()
+      window.XMLHttpRequest.prototype.open = function (e, t, n) {
+        if (
+          project &&
+          t.startsWith(`/api/compilers/v2/${project[0]}`) &&
+          !this.XesExt
+        ) {
+          // 最差的解决办法...有办法变成异步么？
+          let tmp = new XMLHttpRequest()
+          tmp.XesExt = true
+          tmp.open(e, t, false)
+          tmp.send()
+          if (tmp.status != 200) {
+            tmp = new XMLHttpRequest()
+            tmp.XesExt = true
+            tmp.open(
+              e,
+              `/api/community/v4/projects/detail?id=${project[0]}&lang=${project[2]}`,
+              false
+            )
+            tmp.send()
+          }
+          const fixed = JSON.parse(tmp.response)
+          if (!fixed.data.published) {
+            fixed.data.published_at = fixed.data.modified_at
+          }
+          Object.defineProperties(this, {
+            status: {
+              get: () => tmp.status
+            },
+            response: {
+              get: () => JSON.stringify(fixed)
+            },
+            statusText: {
+              get: () => tmp.statusText
+            },
+            responseText: {
+              get: () => JSON.stringify(fixed)
+            }
+          })
+          _open.call(this, e, 'data:application/json,{}', n)
+        } else _open.call(this, e, t, n)
+      }
+    }
+  )
+  plug.plug('clean_top', '还你一个干净的首页。', patch.document.start, () => {
+    patch.document.DOMNodeInserted(() => {
+      /// 删除猫博士的开眼课堂和老师们的作品[重制版] by 凌
+      const keduo_wrapper = document.getElementById('homePageKeduoGuide')
+      if (keduo_wrapper) {
+        keduo_wrapper.remove()
+        const cursorfollow = document.getElementById(
+          'home-component-cursor-follow'
+        )
+        if (cursorfollow) {
+          cursorfollow.childNodes[0].style.visibility = 'hidden'
+          cursorfollow.childNodes[
+            cursorfollow.childNodes.length - 1
+          ].style.visibility = 'hidden'
+        }
+      }
+      const tagwork = document.getElementsByClassName('tagWorks-list-wrapper')
+      if (tagwork.length == 1) {
+        tagwork[0].style.marginTop = '-311px'
+      }
+      const floorbarwrapper =
+        document.getElementsByClassName('floor-bar-wrapper')
+      if (floorbarwrapper.length == 1) {
+        floorbarwrapper[0].remove()
       }
     })
-    let newref = undefined
-    Object.defineProperty(window, 'refWsTerm', {
-      get() {
-        if (newref == undefined || newref.xterm == undefined) {
-          newref = {}
-          let newterm = undefined
-          Object.defineProperty(newref, 'xterm', {
-            get() {
-              return newterm
-            },
-            set(e) {
-              newterm = e
-              window.refWsTerm = window.refWsTerm
-            },
-          })
-        }
-        return newref
-      },
-      set(e) {
-        const w = newref == undefined
-        newref = e
-        if (
-          newref.xterm != undefined &&
-          (w || !(newref.xterm.term instanceof window.Terminal))
-        ) {
-          const tmp = {}
-          for (const [key, value] of Object.entries(
-            newref.xterm.term._core._events
-          )) {
-            if (!tmp[key]) tmp[key] = []
-            value.forEach((v) => {
-              tmp[key].push(v)
-            })
-          }
-          newref.xterm.close()
-          const xterm = document.getElementById('terminal')
-          if (xterm) {
-            // 背景修补
-            xterm.style.backgroundColor =
-              xterm.parentNode.style.backgroundColor = xterm_theme.background
-            const term = new window.Terminal({
-              rows: newref.xterm.term.rows,
-              cols: newref.xterm.term.cols,
-              fontSize: 15,
-              fontFamily:
-                '"Jetbrains Mono", "Fira Code", "Cascadia Code", "Noto Emoji", "Segoe UI Emoji", "Lucida Console", Menlo, courier-new, courier, monospace',
-              theme: xterm_theme,
-              cursorBlink: true,
-              allowProposedApi: true,
-            })
-            term.open(xterm)
-            // WebGL 加速
-            try {
-              // 检查是否支持 WebGL
-              const canvas = document.createElement('canvas')
-              const gl =
-                canvas.getContext('webgl') ||
-                canvas.getContext('experimental-webgl')
-              if (gl instanceof WebGLRenderingContext) {
-                try {
-                  term.loadAddon(new window.WebglAddon.WebglAddon())
-                } catch (_) {
-                  term.loadAddon(new window.CanvasAddon.CanvasAddon())
-                  console.error(
-                    '[XesExt-xterm] Failed to initalize WebGL renderer. Switching to Canvas renderer.'
-                  )
-                }
-              } else {
-                console.error(
-                  '[XesExt-xterm] Your browser does not support WebGL feature. Switching to Canvas renderer.'
-                )
-                term.loadAddon(new window.CanvasAddon.CanvasAddon())
-              }
-              // term.loadAddon(new window.LigaturesAddon.LigaturesAddon())
-              term.loadAddon(new window.WebLinksAddon.WebLinksAddon())
-              term.loadAddon(new window.Unicode11Addon.Unicode11Addon())
-              const fit = new window.FitAddon.FitAddon()
-              term.loadAddon(fit)
-              term.fit = () => fit.fit()
-              let _ev = {}
-              term.on = (e, f) => {
-                // 为以前版本的兼容性作处理。
-                switch (e) {
-                  case 'data': {
-                    const l = term.onData(f)
-                    if (_ev[e] == undefined) {
-                      _ev[e] = [l]
-                    } else {
-                      _ev[e].push(l)
-                    }
-                    break
-                  }
-                  case 'resize': {
-                    const l = term.onResize(f)
-                    if (_ev[e] == undefined) {
-                      _ev[e] = [l]
-                    } else {
-                      _ev[e].push(l)
-                    }
-                    break
-                  }
-                }
-              }
-              term.off = (e) => {
-                // 为以前版本的兼容性作处理。
-                // if (_ev[e] != undefined) {
-                //     for (const v of _ev[e]) {
-                //         v.dispose()
-                //     }
-                //     _ev[e] = []
-                // }
-                // 可惜的是，学而思前端太蠢了忘记了重新注册事件，因此我们完全不做处理。
-              }
-              for (const [key, value] of Object.entries(tmp)) {
-                term.on(key, (...args) => {
-                  value.forEach((v) => {
-                    v(...args)
-                  })
-                })
-              }
-              term.setOption = (k, v) => {
-                // 为以前版本的兼容性作处理。
-                term.options[k] = v
-              }
-              term.unicode.activeVersion = '11'
-            } catch (e) {
-              console.error('[XesExt-xterm] Load addons failed', e)
-            }
-            // 阻止滚轮事件滚动页面
-            xterm.childNodes[0].addEventListener('wheel', (e) => {
-              // if (term.buffer.active.baseY > 0) {
-              e.preventDefault()
-              // }
-            })
-            xterm.addEventListener('wheel', (e) => {
-              e.preventDefault()
-            })
-            // 修正居中问题
-            xterm.childNodes[0].style.textAlign = 'left'
-            newref.xterm.term = term
-          }
-        }
-      },
-    })
-    console.warn('XesExt patched window.refWsTerm')
-    window.XMLHttpRequest.prototype.open = function (e, t, n) {
-      this.__xes_url = t
-      if (
-        t.startsWith(`/api/compilers/v2/${project[0]}`) &&
-        !this.__xes_disableFilter
-      ) {
-        console.warn(`XesExt replaced /api/compilers/v2/${project[0]} request`)
-        // 最差的解决办法...有办法变成异步么？
-        let tmp = new XMLHttpRequest()
-        tmp.__xes_disableFilter = true
-        tmp.open(e, t, false)
-        tmp.send()
-        if (tmp.status != 200) {
-          tmp = new XMLHttpRequest()
-          tmp.__xes_disableFilter = true
-          tmp.open(
+    patch.XMLHttpRequest.open(_open => {
+      window.XMLHttpRequest.prototype.open = function (e, t, n) {
+        if (t.startsWith('/api/index/works/modules')) {
+          _open.call(
+            this,
             e,
-            (this.__xes_url = `/api/community/v4/projects/detail?id=${project[0]}&lang=${project[2]}`),
-            false
+            'data:application/json,{"stat":1,"status":1,"msg":"","data":[{"title":"可多推荐","simple_title":"可多推荐","lines":2,"items":[]},{"title":"我的关注","simple_title":"我的关注","lines":2,"items":[]},{"title":"猜你喜欢","simple_title":"猜你喜欢","lines":2,"items":[]}]}',
+            n
           )
-          tmp.send()
+        } else {
+          _open.call(this, e, t, n)
         }
-        const fixed = JSON.parse(tmp.response)
-        if (!fixed.data.published) {
-          fixed.data.published_at = fixed.data.modified_at
+      }
+    })
+  })
+  plug.plug(
+    'remove_timer',
+    '删除作品运行间隔和 WebPy 运行时长限制。',
+    patch.document.start,
+    () => {
+      const _setTimeout = window.setTimeout
+      window.setTimeout = (code, delay, ...args) => {
+        if (code.toString().includes('fnTryLockRun')) {
+          code()
+          return -1
         }
-        Object.defineProperty(this, 'status', {
-          get: () => tmp.status,
-        })
-        Object.defineProperty(this, 'response', {
-          get: () => JSON.stringify(fixed),
-        })
-        Object.defineProperty(this, 'statusText', {
-          get: () => tmp.statusText,
-        })
-        Object.defineProperty(this, 'responseText', {
-          get: () => JSON.stringify(fixed),
-        })
-        _open.call(this, e, (this.__xes_url = 'data:application/json,{}'), n)
-      } else _base_open.call(this, e, t, n)
-    }
-  } else {
-    console.warn('XesExt is running in non-project page')
-    window.XMLHttpRequest.prototype.open = function (e, t, n) {
-      this.__xes_url = t
-      if (
-        (t.startsWith('/api/works/latest') ||
-          t.startsWith('/api/works/popular') ||
-          t.startsWith('/api/works/courses')) &&
-        !this.__xes_disableFilter
-      ) {
-        console.warn(`XesExt replaced ${t} request`)
-        let tmp = new XMLHttpRequest()
-        tmp.__xes_disableFilter = true
-        tmp.open(e, t, false)
-        tmp.send()
-        const fixed = JSON.parse(tmp.response)
-        const c = []
-        for (const v of fixed.data) {
-          try {
-            if (!SPAM_FILTER(v)) c.push(v)
-            else console.error('XesExt filtered work', v)
-          } catch (e) {
-            console.error(e)
+        return _setTimeout(code, delay, ...args)
+      }
+      if (window.Sk) {
+        let v = Infinity
+        Object.defineProperty(window.Sk, 'execLimit', {
+          get: () => v,
+          set: val => {
+            if (val == 0) {
+              v = 0
+            } else {
+              v = Infinity
+            }
           }
-        }
-        fixed.data = c
-        Object.defineProperty(this, 'status', {
-          get: () => tmp.status,
         })
-        Object.defineProperty(this, 'response', {
-          get: () => JSON.stringify(fixed),
+        Object.defineProperty(window.Sk, 'yieldLimit', {
+          get: () => v,
+          set: val => {
+            if (val == 0) {
+              v = 0
+            } else {
+              v = Infinity
+            }
+          }
         })
-        Object.defineProperty(this, 'statusText', {
-          get: () => tmp.statusText,
-        })
-        Object.defineProperty(this, 'responseText', {
-          get: () => JSON.stringify(fixed),
-        })
-        _open.call(this, e, (this.__xes_url = 'data:application/json,{}'), n)
-      } else _base_open.call(this, e, t, n)
+      }
     }
-  }
-  // 6，非得让你污染原型链不可。学而思前端还是趁早辞职吧？
-  console.warn('XesExt patched window.XMLHttpRequest.prototype.open')
-  /// 删除作品运行间隔 by 凌
-  const _setTimeout = window.setTimeout
-  window.setTimeout = (code, delay, ...args) => {
-    if (code.toString().includes('fnTryLockRun')) {
-      code()
-      return -1
+  )
+  plug.plug('spam_filter', '过滤垃圾作品。', patch.document.start, () => {
+    let spam_filter = plug.get_option_or('filter', '() => true')
+    try {
+      const url = new URL(spam_filter)
+      spam_filter = () => true
+      let req = new XMLHttpRequest()
+      req.XesExt = true
+      req.open('GET', url, false)
+      req.send()
+      try {
+        spam_filter = new Function(`return ${req.responseText}`)()
+        if (typeof spam_filter !== 'function')
+          throw new Error('filter 必须为一个函数')
+      } catch (err) {
+        logger.error(
+          `XesExt %cspam_filter%c 无法加载，因为配置文件读取错误。\n${err}`,
+          CODEFONT_CSS,
+          ''
+        )
+        return
+      }
+    } catch (_) {
+      try {
+        spam_filter = new Function(`return ${spam_filter}`)()
+        if (typeof spam_filter !== 'function')
+          throw new Error('filter 必须为一个函数')
+      } catch (err) {
+        logger.error(
+          `XesExt %cspam_filter%c 无法加载，因为配置文件读取错误。\n${err}`,
+          CODEFONT_CSS,
+          ''
+        )
+        return
+      }
     }
-    return _setTimeout(code, delay, ...args)
+    patch.document.load(() => {
+      const tooltip = document.getElementsByClassName('tag-tooltip')
+      if (tooltip.length == 1) {
+        tooltip[0].replaceWith(tooltip[0].cloneNode(true))
+        tooltip[0].title = 'XesExt Spam Blocker'
+        tooltip[0].addEventListener('click', ev => {
+          const t = prompt(
+            `请输入新的拦截器(留空重置为默认)，也可以输入 js URL 来持续订阅拦截器。\n\n提示:\n1. 拦截器的参数是 https://code.xueersi.com/api/works/latest 返回的 data 数组中的一个成员。\n2. 拦截器应返回 true(保留此作品) 或 false(过滤此作品)。\n3. 拦截器具有对网页的完全访问权限，请注意账户安全。`,
+            plug.get_option_or('filter', '() => true')
+          )
+          if (t == '') {
+            if (
+              confirm(
+                '确定要重置为默认拦截器吗？\n\n警告:\n1. 默认拦截器无法拦截任何内容。\n2. 原有的拦截器将永久丢失。'
+              )
+            ) {
+              plug.set_option('filter', '() => true')
+              window.location.reload()
+            }
+          }
+          if (t) {
+            try {
+              const url = new URL(t)
+              plug.set_option('filter', url.toString())
+              window.location.reload()
+            } catch (err) {
+              let r = null
+              try {
+                r = new Function(`return ${t};`)()
+                if (!r instanceof Function) {
+                  throw null
+                }
+              } catch (_) {
+                alert('拦截器语法不正确。')
+                ev.preventDefault()
+                return
+              }
+              plug.set_option('filter', r.toString())
+              window.location.reload()
+            }
+          }
+          ev.preventDefault()
+        })
+      }
+    })
+    patch.XMLHttpRequest.open(_open => {
+      window.XMLHttpRequest.prototype.open = function (e, t, n) {
+        if (
+          (t.startsWith('/api/works/latest') ||
+            t.startsWith('/api/works/popular') ||
+            t.startsWith('/api/works/courses')) &&
+          !this.XesExt
+        ) {
+          let tmp = new XMLHttpRequest()
+          tmp.XesExt = true
+          tmp.open(e, t, false)
+          tmp.send()
+          const fixed = JSON.parse(tmp.response)
+          let c = []
+          for (const v of fixed.data) {
+            try {
+              if (spam_filter(v)) c.push(v)
+            } catch (e) {
+              logger.error(
+                `XesExt %cspam_filter%c 无法正确运行，因为拦截器发生错误。\n${err}`,
+                CODEFONT_CSS,
+                ''
+              )
+              c = fixed.data
+              break
+            }
+          }
+          if (c.length != fixed.data.length) {
+            logger.warn(
+              `XesExt %cspam_filter%c 在此页面上过滤了 ${
+                fixed.data.length - c.length
+              }(共 ${fixed.data.length}) 个作品。`,
+              CODEFONT_CSS,
+              ''
+            )
+          }
+          fixed.data = c
+          Object.defineProperties(this, {
+            status: {
+              get: () => tmp.status
+            },
+            response: {
+              get: () => JSON.stringify(fixed)
+            },
+            statusText: {
+              get: () => tmp.statusText
+            },
+            responseText: {
+              get: () => JSON.stringify(fixed)
+            }
+          })
+          _open.call(this, e, 'data:application/json,{}', n)
+        } else _open.call(this, e, t, n)
+      }
+    })
+  })
+  plug.plug(
+    'disable_log',
+    '禁止对 console 的调用。',
+    patch.document.start,
+    () => {
+      console.log =
+        console.warn =
+        console.info =
+        console.error =
+        console.debug =
+        console.time =
+          () => {}
+      window.onerror = () => {}
+    }
+  )
+  plug.done()
+  logger.clear()
+  if (plug.get_option_or('first_time_use', true)) {
+    alert(
+      '提示:\nXesExt v2 和 XesExt 不兼容，且通过命令行修改设置。\nXesExt v1 的设置将不再有效，请重新设定相应设置。'
+    )
+    logger.warn(
+      '这是你第一次使用 XesExt v2，请参照以下输出的说明，自行修改想要的配置。'
+    )
+    plug.set_option('first_time_use', false)
   }
-  console.warn('XesExt patched window.setTimeout')
+  logger.warn('XesExt v2 是学而思最成熟、最优雅的扩展插件。')
+  logger.warn(
+    '关于开发自己的功能，可以参见 %cXesExt.help("development")%c。',
+    CODEFONT_CSS,
+    ''
+  )
+  window.XesExt.enable()
+  logger.warn('请使用 %cXesExt.help()%c 查看帮助。', CODEFONT_CSS, '')
 })()
