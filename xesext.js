@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      2.0.1
+// @version      2.0.2
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -1024,7 +1024,7 @@ window.XesExt = {
       }
     })
   })
-  plug.plug('unlimited_sign', '解除签名大小限制。', patch.document.load, () => {
+  plug.plug('unlimited_sign', '解除签名大小限制。', patch.document.DOMNodeInserted, () => {
     const sign = document.getElementById('signatureInput')
     if (sign) {
       try {
