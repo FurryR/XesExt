@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      2.0.2
+// @version      2.0.3
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -138,15 +138,20 @@ const patch = {
     start: fn => void fn(),
     /**
      * 在页面插入节点之后触发。
-     * @param {(ev: AnimationEvent) => void} fn
+     * @param {(ob: MutationObserver) => void} fn
      */
-    DOMNodeInserted: fn =>
+    observe_document: elem => fn =>
       void document.addEventListener(
-        'DOMNodeInserted',
-        ev => {
-          // if (ev.animationName == 'nodeInserted') {
-          fn(ev)
-          // }
+        'load',
+        () => {
+          try {
+            const ob = new MutationObserver(() => {
+              fn(ob)
+            }).observe(elem(), {
+              childList: true,
+              subtree: true
+            })
+          } catch (_) {}
         },
         true
       )
@@ -396,26 +401,25 @@ window.XesExt = {
   plug.plug('adapt', '变更改编按钮行为。', patch.document.load, () => {
     const adaptButton = document.getElementsByClassName('adapt')
     if (adaptButton.length == 1) {
-      adaptButton[0].replaceWith(adaptButton[0].cloneNode(true))
-      adaptButton[0].childNodes[1].data = ' 审查 '
-      adaptButton[0].addEventListener('click', ev => {
+      const newAdaptButton = adaptButton[0].cloneNode(true)
+      adaptButton[0].replaceWith(newAdaptButton)
+      newAdaptButton.childNodes[1].data = ' 审查 '
+      newAdaptButton.addEventListener('click', ev => {
         window.open(getScratchlink.apply(null, getPropertyByUrl()), '_blank')
         ev.preventDefault()
       })
     } else {
       const notAllowAdaptButton = document.getElementsByClassName('tooltip')
       if (notAllowAdaptButton.length == 1) {
-        notAllowAdaptButton[0].replaceWith(
-          notAllowAdaptButton[0].cloneNode(true)
-        )
-        notAllowAdaptButton[0].childNodes[0].className = 'adapt'
-        notAllowAdaptButton[0].childNodes[0].childNodes[0].className =
-          'never-adapt'
-        notAllowAdaptButton[0].childNodes[0].childNodes[1].data = ' 审查 '
-        for (const i of notAllowAdaptButton[0].childNodes) {
-          notAllowAdaptButton[0].parentNode.appendChild(i)
+        const newAdaptButton = notAllowAdaptButton[0].cloneNode(true)
+        notAllowAdaptButton[0].replaceWith(newAdaptButton)
+        newAdaptButton.childNodes[0].className = 'adapt'
+        newAdaptButton.childNodes[0].childNodes[0].className = 'never-adapt'
+        newAdaptButton.childNodes[0].childNodes[1].data = ' 审查 '
+        for (const i of newAdaptButton.childNodes) {
+          newAdaptButton.parentNode.appendChild(i)
         }
-        notAllowAdaptButton[0].remove()
+        newAdaptButton.remove()
         const parent = document.getElementsByClassName('not-allow-adapt')
         if (parent.length == 1) {
           for (const i of parent[0].childNodes) {
@@ -466,19 +470,17 @@ window.XesExt = {
     }
   )
   plug.plug('theme', '[编辑器模式] 更换主题。', patch.document.load, () => {
-    // 更换字体大小按钮
-    const textsize = document.getElementsByClassName('btn-font-size')
-    if (textsize.length == 1) {
-      if (
-        window.aceEditor &&
-        window.location.pathname.startsWith('/ide/code/')
-      ) {
+    if (window.location.pathname.startsWith('/ide/code/')) {
+      // 更换字体大小按钮
+      const textsize = document.getElementsByClassName('btn-font-size')
+      if (textsize.length == 1) {
         for (const d of textsize[0].childNodes) {
           textsize[0].removeChild(d)
         }
-        textsize[0].replaceWith(textsize[0].cloneNode(true))
-        textsize[0].textContent = ' T '
-        textsize[0].addEventListener('click', ev => {
+        const newTextsize = textsize[0].cloneNode(true)
+        textsize[0].replaceWith(newTextsize)
+        newTextsize.textContent = ' T '
+        newTextsize.addEventListener('click', ev => {
           const t = prompt(
             `输入新的主题 ID(比如 ace/theme/tomorrow_night):`,
             window.aceEditor.getTheme()
@@ -490,29 +492,29 @@ window.XesExt = {
           ev.preventDefault()
         })
       }
-    }
-    // 破解 aceEditor
-    const editor = document.getElementsByClassName(
-      'ace-editor tile is-child box ace_editor ace-tm'
-    )
-    if (editor.length == 1) {
-      editor[0].attributes.removeNamedItem(editor[0].attributes[0].name)
-      editor[0].className = 'ace-editor tile is-child ace_editor ace-tm'
-    }
-    const gutterLayer = document.getElementsByClassName(
-      'ace_layer ace_gutter-layer'
-    )
-    if (gutterLayer.length == 1) {
-      gutterLayer[0].style.textAlign = 'right'
-      gutterLayer[0].className = gutterLayer[0].className.replace(
-        'ace_gutter-layer',
-        ''
+      // 破解 aceEditor
+      const editor = document.getElementsByClassName(
+        'ace-editor tile is-child box ace_editor ace-tm'
       )
-    }
-    // 从 localStorage 读入
-    if (window.aceEditor) {
-      const g = plug.get_option_or('theme', 'ace/theme/tomorrow_night')
-      window.aceEditor.setTheme(g)
+      if (editor.length == 1) {
+        editor[0].attributes.removeNamedItem(editor[0].attributes[0].name)
+        editor[0].className = 'ace-editor tile is-child ace_editor ace-tm'
+      }
+      const gutterLayer = document.getElementsByClassName(
+        'ace_layer ace_gutter-layer'
+      )
+      if (gutterLayer.length == 1) {
+        gutterLayer[0].style.textAlign = 'right'
+        gutterLayer[0].className = gutterLayer[0].className.replace(
+          'ace_gutter-layer',
+          ''
+        )
+      }
+      // 从 localStorage 读入
+      if (window.aceEditor) {
+        const g = plug.get_option_or('theme', 'ace/theme/tomorrow_night')
+        window.aceEditor.setTheme(g)
+      }
     }
   })
   plug.plug('anti_autolike', '防止自动点赞。', patch.document.load, () => {
@@ -810,45 +812,47 @@ window.XesExt = {
     }
   )
   plug.plug('clean_top', '还你一个干净的首页。', patch.document.start, () => {
-    patch.document.DOMNodeInserted(() => {
-      /// 删除猫博士的开眼课堂和老师们的作品[重制版] by 凌
-      const keduo_wrapper = document.getElementById('homePageKeduoGuide')
-      if (keduo_wrapper) {
-        keduo_wrapper.remove()
-        const cursorfollow = document.getElementById(
-          'home-component-cursor-follow'
-        )
-        if (cursorfollow) {
-          cursorfollow.childNodes[0].style.visibility = 'hidden'
-          cursorfollow.childNodes[
-            cursorfollow.childNodes.length - 1
-          ].style.visibility = 'hidden'
-        }
-      }
-      const tagwork = document.getElementsByClassName('tagWorks-list-wrapper')
-      if (tagwork.length == 1) {
-        tagwork[0].style.marginTop = '-311px'
-      }
-      const floorbarwrapper =
-        document.getElementsByClassName('floor-bar-wrapper')
-      if (floorbarwrapper.length == 1) {
-        floorbarwrapper[0].remove()
-      }
-    })
-    patch.XMLHttpRequest.open(_open => {
-      window.XMLHttpRequest.prototype.open = function (e, t, n) {
-        if (t.startsWith('/api/index/works/modules')) {
-          _open.call(
-            this,
-            e,
-            'data:application/json,{"stat":1,"status":1,"msg":"","data":[{"title":"可多推荐","simple_title":"可多推荐","lines":2,"items":[]},{"title":"我的关注","simple_title":"我的关注","lines":2,"items":[]},{"title":"猜你喜欢","simple_title":"猜你喜欢","lines":2,"items":[]}]}',
-            n
+    if (window.location.pathname == '/') {
+      patch.document.observe_document(() => document.body)(() => {
+        /// 删除猫博士的开眼课堂和老师们的作品[重制版] by 凌
+        const keduo_wrapper = document.getElementById('homePageKeduoGuide')
+        if (keduo_wrapper) {
+          keduo_wrapper.remove()
+          const cursorfollow = document.getElementById(
+            'home-component-cursor-follow'
           )
-        } else {
-          _open.call(this, e, t, n)
+          if (cursorfollow) {
+            cursorfollow.childNodes[0].style.visibility = 'hidden'
+            cursorfollow.childNodes[
+              cursorfollow.childNodes.length - 1
+            ].style.visibility = 'hidden'
+          }
         }
-      }
-    })
+        const tagwork = document.getElementsByClassName('tagWorks-list-wrapper')
+        if (tagwork.length == 1) {
+          tagwork[0].style.marginTop = '-311px'
+        }
+        const floorbarwrapper =
+          document.getElementsByClassName('floor-bar-wrapper')
+        if (floorbarwrapper.length == 1) {
+          floorbarwrapper[0].remove()
+        }
+      })
+      patch.XMLHttpRequest.open(_open => {
+        window.XMLHttpRequest.prototype.open = function (e, t, n) {
+          if (t.startsWith('/api/index/works/modules')) {
+            _open.call(
+              this,
+              e,
+              'data:application/json,{"stat":1,"status":1,"msg":"","data":[{"title":"可多推荐","simple_title":"可多推荐","lines":2,"items":[]},{"title":"我的关注","simple_title":"我的关注","lines":2,"items":[]},{"title":"猜你喜欢","simple_title":"猜你喜欢","lines":2,"items":[]}]}',
+              n
+            )
+          } else {
+            _open.call(this, e, t, n)
+          }
+        }
+      })
+    }
   })
   plug.plug(
     'remove_timer',
@@ -926,9 +930,10 @@ window.XesExt = {
     patch.document.load(() => {
       const tooltip = document.getElementsByClassName('tag-tooltip')
       if (tooltip.length == 1) {
-        tooltip[0].replaceWith(tooltip[0].cloneNode(true))
-        tooltip[0].title = 'XesExt Spam Blocker'
-        tooltip[0].addEventListener('click', ev => {
+        const newTooltip = tooltip[0].cloneNode(true)
+        newTooltip.replaceWith(newTooltip)
+        newTooltip.title = 'XesExt Spam Blocker'
+        newTooltip.addEventListener('click', ev => {
           const t = prompt(
             `请输入新的拦截器(留空重置为默认)，也可以输入 js URL 来持续订阅拦截器。\n\n提示:\n1. 拦截器的参数是 https://code.xueersi.com/api/works/latest 返回的 data 数组中的一个成员。\n2. 拦截器应返回 true(保留此作品) 或 false(过滤此作品)。\n3. 拦截器具有对网页的完全访问权限，请注意账户安全。`,
             plug.get_option_or('filter', '() => true')
@@ -1024,18 +1029,104 @@ window.XesExt = {
       }
     })
   })
-  plug.plug('unlimited_sign', '解除签名大小限制。', patch.document.DOMNodeInserted, () => {
-    const sign = document.getElementById('signatureInput')
-    if (sign) {
-      try {
-      sign.attributes.removeNamedItem('maxLength')
-      } catch (_) {}
+  plug.plug('sudo', '非唯C者也是人。', patch.XMLHttpRequest.open, _open => {
+    const project = getPropertyByUrl()
+    window.XMLHttpRequest.prototype.open = function (e, t, n) {
+      if (t == '/api/index/shequ/permission_level') {
+        _open.call(
+          this,
+          e,
+          'data:application/json,{"stat":1,"status":1,"msg":"","data":{"permission_level":"8"}}',
+          n
+        )
+      } else if (project && t == `/api/compilers/${project[0]}/publish`) {
+        _open.call(this, e, `/api/python/${project[0]}/publish`, n)
+      } else {
+        _open.call(this, e, t, n)
+      }
     }
-    const comment = document.getElementById('comment-box')
-    if (comment) {
+  })
+  plug.plug('unlimited_workname', '无限作品名制。', patch.document.load, () => {
+    if (window.location.pathname.startsWith('/scratch')) {
+      // scratch 破解法
       try {
-      comment.attributes.removeNamedItem('maxLength')
+        document
+          .querySelector('input[class*="project-title-input_title-field_"]')
+          .attributes.removeNamedItem('maxlength')
       } catch (_) {}
+    } else if (window.location.pathname.startsWith('/ide/code')) {
+      // 一般作品破解法
+      const headercon = document.getElementsByClassName('headercon-input')
+      if (headercon.length == 1) {
+        try {
+          headercon[0].attributes.removeNamedItem('maxlength')
+        } catch (_) {}
+      }
+    } else if (window.location.pathname == '/project/publish/modal') {
+      const pub = document.getElementsByClassName('publish_work_name')
+      if (pub.length == 1) {
+        try {
+          pub[0].children[0].attributes.removeNamedItem('maxlength')
+        } catch (_) {}
+      }
+      const description = document.getElementsByClassName(
+        'work_description_textarea'
+      )
+      if (description.length == 1) {
+        try {
+          description[0].children[0].attributes.removeNamedItem('maxlength')
+        } catch (_) {}
+      }
+    }
+  })
+  plug.plug(
+    'unlimited_sign',
+    '解除签名大小限制。',
+    patch.document.observe_document(() => document.body),
+    () => {
+      const sign = document.getElementById('signatureInput')
+      if (sign) {
+        try {
+          sign.attributes.removeNamedItem('maxlength')
+        } catch (_) {}
+      }
+      const comment = document.getElementById('comment-box')
+      if (comment) {
+        try {
+          comment.attributes.removeNamedItem('maxlength')
+        } catch (_) {}
+      }
+    }
+  )
+  plug.plug('unlimited_tag', '无限标签制。', patch.document.load, () => {
+    if (window.location.pathname == '/project/publish/modal') {
+      const e = document.getElementsByClassName('publish')
+      if (e.length == 1) {
+        const vue = e[0].__vue__
+        const placeholder = document.getElementsByClassName('tag-placerholder')
+        vue.toSelectedTag = function (t) {
+          if (this.selectedTagList.includes(t)) {
+            const e = this.selectedTagList.findIndex(e => e == t)
+            this.selectedTagList.splice(e, 1)
+          } else this.selectedTagList.push(t)
+        }
+        if (placeholder.length == 1) {
+          placeholder[0].childNodes[0].data = '可点击右方的问号添加自定义标签。'
+          const child = placeholder[0].children[0]
+          const newChild = child.cloneNode(true)
+          child.replaceWith(newChild)
+          newChild.title = '增加自定义标签...'
+          newChild.addEventListener('click', ev => {
+            let p = prompt('请输入需要添加的标签。')
+            if (p) {
+              if (!vue.tagList.includes(p)) {
+                vue.tagList.push(p)
+              }
+            }
+            ev.preventDefault()
+          })
+        }
+      }
     }
   })
   plug.plug(
