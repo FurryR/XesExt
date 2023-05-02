@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XesExt
 // @namespace    http://github.com/FurryR/XesExt
-// @version      2.0.3
+// @version      2.0.4
 // @description  Much Better than Original - 学而思功能增强
 // @license      GPL-3.0
 // @author       凌
@@ -931,7 +931,7 @@ window.XesExt = {
       const tooltip = document.getElementsByClassName('tag-tooltip')
       if (tooltip.length == 1) {
         const newTooltip = tooltip[0].cloneNode(true)
-        newTooltip.replaceWith(newTooltip)
+        tooltip[0].replaceWith(newTooltip)
         newTooltip.title = 'XesExt Spam Blocker'
         newTooltip.addEventListener('click', ev => {
           const t = prompt(
